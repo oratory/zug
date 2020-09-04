@@ -24,8 +24,8 @@ fastify.get('/:w(^[a-zA-Z0-9]{16}$)/:e(\\d+)', async (req, res) => {
 // Run the server!
 fastify.listen(config.backend.port, '0.0.0.0', function (err, address) {
   if (err) {
-    fastify.log.error(err)
+    console.error(err)
     process.exit(1)
   }
-  fastify.log.info(`server listening on ${address}`)
+  console.log(`server listening on ${address}`)
 })
