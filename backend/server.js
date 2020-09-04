@@ -5,6 +5,7 @@ global.redis = require('./redis')
   
 const fastify = require('fastify')({logger: true})
 fastify.register(require('fastify-cors'), {origin: true})
+fastify.decorateReply('cache', require('./middleware/cache'))
 
 const fastifyStatic = require('fastify-static')
 fastify.register(require('./api'), { prefix: '/api' })

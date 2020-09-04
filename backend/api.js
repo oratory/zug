@@ -25,7 +25,7 @@ module.exports = function (fastify, opts, next) {
         delete report.exportedCharacters
       }
       redis.set(req.query.id, report)
-      res.send(report)
+      res.cache(3600*24).send(report)
     }
     catch (e) {
       console.log(e)
@@ -72,7 +72,7 @@ module.exports = function (fastify, opts, next) {
       const redisKey = `${req.query.id}:${fightKey}:${req.query.type}`
       var events = await redis.get(redisKey)
       if (events) {
-        return res.send(events)
+        return res.cache(3600*24).send(events)
       }
       var report = await redis.get(req.query.id)
       if (!report) {
@@ -94,7 +94,7 @@ module.exports = function (fastify, opts, next) {
       events = events.events
 
       redis.set(redisKey, events)
-      res.send(events)
+      res.cache(3600*24).send(events)
     }
     catch (e) {
       console.log(e)
