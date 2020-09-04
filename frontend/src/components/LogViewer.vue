@@ -91,7 +91,6 @@ h3 {
   margin: 0 0 20px;
 }
 #fight-select {
-  justify-content: center;
   flex-wrap: wrap
 }
 #fight-select > div {
@@ -106,6 +105,7 @@ h3 {
   flex-direction: column;
   justify-content: center;
   cursor: pointer;
+  background: #292929;
 }
 #fight-select > div.selected {
   border-color: #55AA55;
@@ -114,6 +114,7 @@ h3 {
   background: #393939;
 }
 #analysis > div {
-  margin: 40px 0;
+  margin-top: 40px;
+  background: #303030;
 }
 </style>
