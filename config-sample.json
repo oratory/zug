@@ -1,0 +1,12 @@
+{
+  "redis": null,
+  "wclKey": "",
+  "frontend": {
+    "port": 7000
+  },
+  "backend": {
+    "port": 7001,
+    "devServer": "http://io:7001",
+    "prodServer": "http://io:7001"
+  }
+}
