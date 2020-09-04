@@ -29,6 +29,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #DED;
+  height: 100%;
 }
 #header {
   margin-bottom: 32px;
