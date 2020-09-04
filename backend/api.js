@@ -11,6 +11,7 @@ module.exports = function (fastify, opts, next) {
     try {
       var report = await redis.get(req.query.id)
       if (!report) {
+        console.log(`Fetching WCL: \x1b[33m${req.query.id}\x1b[0m`)
         report = await fetch(`https://classic.warcraftlogs.com/v1/report/fights/${req.query.id}?api_key=${config.wclKey}`)
         report = await report.json()
   
@@ -81,6 +82,7 @@ module.exports = function (fastify, opts, next) {
       if (!report.fights[fightKey]) {
         return res.code(400).send({error: 'Invalid request'})
       }
+      console.log(`Fetching WCL: \x1b[33m${req.query.id}\x1b[0m/\x1b[36m${fightKey+1}\x1b[0m/\x1b[35m${eventType}\x1b[0m`)
       events = await fetch(`https://classic.warcraftlogs.com/v1/report/events/${eventType}/${req.query.id}?start=${report.fights[fightKey].start_time}&end=${usePaging && report.fights[fightKey].end_time || report.fights[fightKey].start_time}${addQuery}&api_key=${config.wclKey}`)
       events = await events.json()
       delete events.auraAbilities

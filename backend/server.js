@@ -3,7 +3,7 @@ const path = require('path')
 global.config = JSON.parse(fs.readFileSync('../config.json'))
 global.redis = require('./redis')
   
-const fastify = require('fastify')({logger: true})
+const fastify = require('fastify')()
 fastify.register(require('fastify-cors'), {origin: true})
 fastify.decorateReply('cache', require('./middleware/cache'))
 
