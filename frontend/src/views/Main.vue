@@ -46,7 +46,7 @@ export default {
       else if (val.match(/^[a-zA-Z0-9]{16}$/)) {
         return val
       }
-      var m = val.match(/^https:\/\/classic.warcraftlogs.com\/reports\/([a-zA-Z0-9]{16})(#|$)/)
+      var m = val.match(/^https:\/\/classic.warcraftlogs.com\/reports\/([a-zA-Z0-9]{16})(#|\/|$)/)
       if (m && m[1]) {
         return m[1]
       }
