@@ -45,15 +45,17 @@ export default {
       // force analysis to recreate and update
       this.$nextTick(async () => {
         this.fightKey = id - 1
-        if (!this.report.fights[this.fightKey].summary) {
+        if (!this.report.fights[this.fightKey].enemyDebuffs) {
           var f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=damage`)
           this.$set(this.report.fights[this.fightKey], 'damage', (await f.json()))
-          f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=debuffs`)
-          this.$set(this.report.fights[this.fightKey], 'debuffs', (await f.json()))
-          f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=summons`)
-          this.$set(this.report.fights[this.fightKey], 'summons', (await f.json()))
+          f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=enemyDebuffs`)
+          this.$set(this.report.fights[this.fightKey], 'enemyDebuffs', (await f.json()))
+          f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=enemySummons`)
+          this.$set(this.report.fights[this.fightKey], 'enemySummons', (await f.json()))
           f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=enemyDeaths`)
           this.$set(this.report.fights[this.fightKey], 'enemyDeaths', (await f.json()))
+          f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=casts`)
+          this.$set(this.report.fights[this.fightKey], 'casts', (await f.json()))
           f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=summary`)
           this.$set(this.report.fights[this.fightKey], 'summary', (await f.json()))
         }

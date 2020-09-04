@@ -27,7 +27,7 @@ export default {
     const start = this.report.fights[this.fightKey].start_time
     const addDebuff = /^(applydebuff|applydebuffstack|refreshdebuff)$/
     const removeDebuff = /^(removedebuff)$/
-    for (let debuff of this.report.fights[this.fightKey].debuffs) {
+    for (let debuff of this.report.fights[this.fightKey].enemyDebuffs) {
       let target = this.getTargetName(debuff.targetID, debuff.targetInstance)
       if (!targetDebuffs[target]) {
         targetDebuffs[target] = {
@@ -82,7 +82,7 @@ export default {
       }
     }
 
-    for (let spawn of this.report.fights[this.fightKey].summons) {
+    for (let spawn of this.report.fights[this.fightKey].enemySummons) {
       let target = this.getTargetName(spawn.targetID, spawn.targetInstance)
       if (reducedArmor[target]) {
         reducedArmor[target][spawn.timestamp - start] = 0

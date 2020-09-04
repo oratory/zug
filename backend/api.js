@@ -57,11 +57,11 @@ module.exports = function (fastify, opts, next) {
           eventType = 'deaths'
           addQuery = '&hostility=1'
           break
-        case 'summons':
+        case 'enemySummons':
           eventType = 'summons'
           addQuery = '&hostility=1'
           break
-        case 'debuffs':
+        case 'enemyDebuffs':
           eventType = 'debuffs'
           addQuery = '&hostility=1'
           break
