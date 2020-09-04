@@ -10,11 +10,16 @@ fastify.decorateReply('cache', require('./middleware/cache'))
 const fastifyStatic = require('fastify-static')
 fastify.register(require('./api'), { prefix: '/api' })
 
-fastify.register(fastifyStatic, {root: path.join(__dirname, 'web'), prefix: '/'})
+fastify.register(fastifyStatic, {root: path.join(__dirname, 'web/assets'), prefix: '/assets'})
 fastify.get('/:w', async (req, res) => {
   const stream = fs.createReadStream('./web/index.html')
   res.type('text/html').send(stream)
 })
+fastify.get('/:w(^[a-zA-Z0-9]{16}$)/:e(\\d+)', async (req, res) => {
+  const stream = fs.createReadStream('./web/index.html')
+  res.type('text/html').send(stream)
+})
+
 
 // Run the server!
 fastify.listen(config.backend.port, '0.0.0.0', function (err, address) {

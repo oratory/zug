@@ -7,5 +7,6 @@ module.exports = {
     port: config.frontend.port,
     disableHostCheck: true
   },
-  outputDir: path.resolve(__dirname, '../backend/web')
+  outputDir: path.resolve(__dirname, '../backend/web'),
+  assetsDir: 'assets'
 }
