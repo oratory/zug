@@ -11,6 +11,11 @@ Vue.use(VueRouter)
     path: '/:wcl',
     component: () => import('../views/Main.vue'),
     props: (route) => { return {wcl: route.params.wcl} }
+  },
+  {
+    path: '/:wcl/:encounter',
+    component: () => import('../views/Main.vue'),
+    props: (route) => { return {wcl: route.params.wcl, encounter: parseInt(route.params.encounter)} }
   }
 ]
 

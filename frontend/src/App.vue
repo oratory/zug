@@ -13,7 +13,9 @@
 :root {
   --md-theme-default-primary-on-background: #DED
 }
-
+body {
+  overflow-y: scroll
+}
 #app {
   font-family: Roboto;
   -webkit-font-smoothing: antialiased;

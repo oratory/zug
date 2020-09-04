@@ -4,7 +4,7 @@
       <label>Enter Warcraft Logs ID or URL</label>
       <md-input v-model="wclInput"></md-input>
     </md-field>
-    <log-viewer v-else :wcl="wcl"></log-viewer>
+    <log-viewer v-else :wcl="wcl" :encounter="encounter"></log-viewer>
   </div>
 </template>
 
@@ -12,7 +12,7 @@
 import LogViewer from '@/components/LogViewer.vue'
 
 export default {
-  props: ['wcl'],
+  props: ['wcl', 'encounter'],
   components: {
     LogViewer
   },

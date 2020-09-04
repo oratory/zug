@@ -21,7 +21,8 @@ import Loading from '@/components/Loading.vue'
 
 export default {
   props: {
-    wcl: String
+    wcl: String,
+    encounter: Number
   },
   components: {
     AbilityUse,
@@ -32,6 +33,10 @@ export default {
   created: async function () {
     var f = await fetch(`${window.baseURL}/api/report?id=${this.wcl}`)
     this.report = await f.json()
+
+    if (this.encounter && this.report.fights[this.encounter - 1] && this.report.fights[this.encounter - 1].boss && this.report.fights[this.encounter - 1].kill) {
+      this.selectFight(this.encounter)
+    }
   },
   data: function () {
     return {
@@ -41,6 +46,10 @@ export default {
   },
   methods: {
     selectFight: async function (id) {
+      let to = `/${this.wcl}/${id}`
+      if (this.$router.history.current.path != to) {
+        this.$router.push(to)
+      }
       this.fightKey = -1
       // force analysis to recreate and update
       this.$nextTick(async () => {
