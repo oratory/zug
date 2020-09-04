@@ -6,7 +6,8 @@
     <div class="analysis-block">
       <canvas id="armorpen-chart"></canvas>
       <p><small>* Expose Armor is assumed to be only used with 5 combo points and with the Improved Expose Armor talent.
-      <br>* Currently, only max ranks of Sunder Armor, Expose Armor, Faerie Fire and Curse of Recklessness are tracked.</small></p>
+      <br>* Currently, only max ranks of Sunder Armor, Expose Armor, Faerie Fire and Curse of Recklessness are tracked.
+      <br>* Currently, all targets have a fixed base armor of 3731.</small></p>
     </div>
   </div>
 </template>
@@ -29,7 +30,6 @@ export default {
     for (let debuff of this.report.fights[this.fightKey].debuffs) {
       let target = this.getTargetName(debuff.targetID, debuff.targetInstance)
       if (!targetDebuffs[target]) {
-        reducedArmor[target] = {}
         targetDebuffs[target] = {
           sa: 0,
           iea: 0,
@@ -64,6 +64,9 @@ export default {
       else {
         continue
       }
+      if (!reducedArmor[target]) {
+        reducedArmor[target] = {}
+      }
       reducedArmor[target][debuff.timestamp - start] = Math.max(0, 450 * targetDebuffs[target].sa + targetDebuffs[target].iea + targetDebuffs[target].ff + targetDebuffs[target].cor)
     }
 
@@ -79,14 +82,21 @@ export default {
       }
     }
 
-    var colors = ['#3498DB', '#9B59B6', '#1ABC9C', '#27AE60', '#F1C40F', '#DC7633', '#E6B0AA', '#D7BDE2', '#A9CCE3', '#A3E4D7', '#F9E79F', '#F5CBA7', '#E5E7E9', '#E74C3C', '#FFFFFF']
+    for (let spawn of this.report.fights[this.fightKey].summons) {
+      let target = this.getTargetName(spawn.targetID, spawn.targetInstance)
+      if (reducedArmor[target]) {
+        reducedArmor[target][spawn.timestamp - start] = 0
+      }
+    }
+
+    var colors = ['#3498DB', '#9B59B6', '#1ABC9C', '#27AE60', '#DC7633', '#E6B0AA', '#D7BDE2', '#A9CCE3', '#A3E4D7', '#F9E79F', '#F5CBA7', '#E5E7E9', '#E74C3C', '#FFFFFF']
 
     var fullArmor = 3731
     var datasets = []
     var targets = Object.keys(reducedArmor)
     var maxX = 0
     for (const target of targets) {
-      var data = []
+      let data = []
       for (const [time, pen] of Object.entries(reducedArmor[target])) {
         data.push({x: time/1000, y: fullArmor - pen})
       }
@@ -94,10 +104,28 @@ export default {
         if (!target.match(/#/)) {
           data.unshift({x: 0, y: fullArmor})
         }
-        datasets.push({label: target, steppedLine: true, borderColor: colors.shift(), fill: false, data: data})
+        datasets.push({label: target, steppedLine: true, borderColor: colors.shift(), fill: false, data: data, yAxisID: 'y-axis-1'})
         maxX = Math.max(maxX, data[data.length-1].x)
       }
     }
+
+    var mitigated = {}
+    for (let dmg of this.report.fights[this.fightKey].damage) {
+      let target = this.getTargetName(dmg.targetID, dmg.targetInstance)
+      if (dmg.ability.type == 1 && dmg.mitigated && reducedArmor[target]) {
+        if (!mitigated[dmg.timestamp - start] && reducedArmor[target] && dmg.mitigated) {
+          let currentArmor = fullArmor - this.getCurrentArmorReduction(reducedArmor[target], dmg.timestamp - start)
+          if (currentArmor==3731) console.log(reducedArmor[target])
+          mitigated[dmg.timestamp - start] = (currentArmor / (currentArmor + 400 + 85 * (63 + 4.5 * (63 - 59)))) * 100          
+        }
+      }
+    }
+    let data = []
+    for (const [time, mit] of Object.entries(mitigated)) {
+      data.push({x: time/1000, y: mit})
+    }
+    datasets.push({label: 'Mitigated Damage %', borderColor: '#404840', backgroundColor: '#404840', fill: true, data: data, yAxisID: 'y-axis-2'})
+
     this.$nextTick(() => {
       const ctx = document.getElementById('armorpen-chart')
       new Chart(ctx, {
@@ -110,6 +138,7 @@ export default {
           lineTension: 1,
           scales: {
             yAxes: [{
+              id: 'y-axis-1',
               ticks: {
                 beginAtZero: true
               },
@@ -117,6 +146,19 @@ export default {
                 display: true,
                 labelString: 'Armor'
               },
+            }, {
+              id: 'y-axis-2',
+							position: 'right',
+              ticks: {
+                beginAtZero: true
+              },
+              scaleLabel: {
+                display: true,
+                labelString: 'Mitigated Damage %'
+              },
+              gridLines: {
+								drawOnChartArea: false,
+							}
             }],
             xAxes: [{
               type: 'linear',
@@ -176,6 +218,15 @@ export default {
         return 'Clone' + instance
       }
       return 'Unknown' + instance
+    },
+    getCurrentArmorReduction: function (armor, time) {
+      const values = Object.entries(armor)
+      for (let i = 1; i < values.length; i++) {
+        if (parseInt(values[i][0]) > time) {
+          return values[i-1][1]
+        }
+      }
+      return 0
     }
   }
 }

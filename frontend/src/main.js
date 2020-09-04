@@ -9,12 +9,12 @@ import 'vue-material/dist/vue-material.min.css'
 import 'vue-material/dist/theme/black-green-dark.css'
 Vue.use(VueMaterial)
 
-window.config = require('../../config.json')
+let config = require('../../config.json')
 if (process.env.NODE_ENV === 'development') {
-  window.baseURL = window.config.backend.devServer
+  window.baseURL = config.backend.devServer
 }
 else {
-  window.baseURL = window.config.backend.prodServer
+  window.baseURL = config.backend.prodServer
 }
 
 new Vue({

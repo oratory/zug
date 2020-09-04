@@ -3,6 +3,7 @@
     <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Roboto:400,500,700,400italic|Material+Icons">
     <md-toolbar id="header">
       <h3 class="md-title"><router-link to="/">ZUG ZUG</router-link></h3>
+      <h4>Work-In-Progress Log Analysis Tool for WoW Classic</h4>
     </md-toolbar>
     <router-view/>
   </div>
@@ -31,5 +32,8 @@
 #header a:hover {
   text-decoration: none;
   color: #CFC;
+}
+#header h4 {
+  color: #666
 }
 </style>

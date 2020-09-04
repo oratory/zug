@@ -9,7 +9,7 @@
       <ability-use :report="report" :fightKey="fightKey"></ability-use>
       <world-buffs :report="report" :fightKey="fightKey"></world-buffs>
     </div>
-    <div id="loading" v-if="fightKey >= 0 && !report.fights[fightKey].summary">Loading we are</div>
+    <loading  v-if="fightKey >= 0 && !report.fights[fightKey].summary">Fetching data...</loading>
   </div>
 </template>
 
@@ -17,6 +17,7 @@
 import AbilityUse from '@/components/analysis/AbilityUse.vue'
 import ArmorPen from '@/components/analysis/ArmorPen.vue'
 import WorldBuffs from '@/components/analysis/WorldBuffs.vue'
+import Loading from '@/components/Loading.vue'
 
 export default {
   props: {
@@ -25,7 +26,8 @@ export default {
   components: {
     AbilityUse,
     ArmorPen,
-    WorldBuffs
+    WorldBuffs,
+    Loading
   },
   created: async function () {
     var f = await fetch(`${window.baseURL}/api/report?id=${this.wcl}`)
