@@ -73,6 +73,8 @@ body .md-tooltip {
   height: auto;
   font-size: 12px;
   line-height: 20px;
+  max-width: 95%;
+  white-space: normal;
 }
 #footer a {
   text-decoration: underline;

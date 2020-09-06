@@ -4,9 +4,9 @@
       <h3 class="md-title">Enemy Armor</h3>
     </md-toolbar>
     <div class="analysis-block">
-      <canvas id="armorpen-chart"></canvas>
+      <div id="armorpen-chart-container"><canvas id="armorpen-chart"></canvas></div>
       <div class="md-layout md-row">
-        <div class="md-layout-item md-size-70">
+        <div class="md-layout-item md-size-70 md-small-size-100">
           <template  v-for="(item, target) in armorGainsLosses">
             <div v-if="item.FF.on || item.CoR.on" v-bind:key="target" class="stats">
               <strong>Armor Debuffs on {{target}}</strong>
@@ -34,7 +34,7 @@
           <br>* Currently, only max ranks of Sunder Armor, Expose Armor, Faerie Fire and Curse of Recklessness are tracked.
           <br>* Skeram has an armor value of 3009, other AQ40 bosses have 3731. Other targets use their calculated values you see on the right.</small></p>
         </div>
-        <div class="md-layout-item md-size-30">
+        <div class="md-layout-item md-size-30 md-small-size-100">
           <md-card v-if="targetArmor">            
             <md-toolbar class="md-dense">
               <div class="md-toolbar-section-start">
@@ -303,6 +303,7 @@ export default {
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           lineTension: 1,
           scales: {
             yAxes: [{
@@ -420,14 +421,31 @@ export default {
 </script>
 
 <style scoped lang="scss">
+@media (min-width: 1200px) {
+  #armorpen-chart-container {
+    padding: 10px 20px;
+  }
+}
+canvas, #armorpen-chart-container {
+  min-height: 400px;
+  height: 400px;
+  max-height: 400px;
+  width: 100%;
+  position: relative;
+}
 .analysis-block {
   min-height: 250px;
   border: 1px solid var(--md-theme-default-toolbarvariant, #212121);
   border-radius: 0 0 4px 4px;
   border-top: 0;
+  > .md-row {
+    padding: 0 10px;
+  }
+  > .md-row > .md-layout-item {
+    padding: 10px 10px 20px 10px;
+  }
   
   .md-layout {
-    padding: 20px;
   }
   .md-card {
   }
@@ -450,7 +468,7 @@ p {
   padding: 10px;
   background: #383838;
   border-radius: 4px;
-  margin: 0 20px 20px 0;
+  margin: 0 0 20px 0;
 
   span {
     display: block;

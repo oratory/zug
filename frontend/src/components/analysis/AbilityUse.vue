@@ -6,8 +6,8 @@
     <div class="analysis-block">
       <template v-if="downrankers">
         <h3>Higher rank abilities are available for training!</h3>
-        <div class="md-layout" >
-          <div v-for="(abilities, player, i) in downrankers" v-bind:key="player" class="playerDownrank">
+        <div class="md-layout md-row"> 
+          <div v-for="(abilities, player, i) in downrankers" v-bind:key="player" class="playerDownrank md-layout-item md-small-size-100">
             <p><strong>{{player}}</strong></p>
             <ul>
               <li v-for="(k, spell) in abilities" v-bind:key="i+'-'+spell" ><a :href="`https://classic.wowhead.com/spell=${spell}`">{{spell}}</a></li>
@@ -152,7 +152,7 @@ export default {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .analysis-block {
   min-height: 250px;
   border: 1px solid var(--md-theme-default-toolbarvariant, #212121);
@@ -161,12 +161,15 @@ export default {
   padding: 20px;
 }
 .playerDownrank {
-  max-width: 250px;
-  min-width: 200px;
   padding: 10px 10px 0;
   background: #383838;
   border-radius: 4px;
   margin: 10px;
+  @media (min-width: 1200px) {
+    min-width: 211px;
+    max-width: 211px;
+    width: 211px;
+  }
 }
 .playerDownrank ul {
   padding: 0;
