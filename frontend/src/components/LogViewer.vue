@@ -3,14 +3,14 @@
     <div class="md-layout md-row" id="wcl-title">
       <h3 v-if="report.title">{{report.title}} - {{new Date(report.start).toLocaleString()}}</h3>
       <div class="md-layout-item">
-        <md-button class="md-icon-button" id="refreshBtn" @click="refreshReport()" v-if="report.end + 3600 > Date.now()">
+        <md-button class="md-icon-button" id="refreshBtn" @click="refreshReport()" v-if="report.end + 3600000*4 > Date.now()">
           <md-icon>refresh</md-icon>
         </md-button>
         <md-field>
           <md-select v-model="selectFightID" id="fightSelect" md-dense>
             <md-option :value="-1">Select Encounter</md-option>
             <template v-for="(fight, key) in report.fights">
-              <md-option v-if="fight.wipe" :value="key" v-bind:key="key">{{fight.name}} Wipe</md-option>
+              <md-option v-if="fight.boss && !fight.kill" :value="key" v-bind:key="key">{{fight.name}} {{Math.round(fight.fightPercentage/100)}}% Wipe [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
               <md-option v-else :value="key" v-bind:key="key">{{fight.name}} [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
             </template>
           </md-select>

@@ -85,4 +85,15 @@ body .md-tooltip {
 @media (max-width:500px){
   .github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}
 }
+
+.druid {color: #FF7D0A!important}
+.hunter {color: #A9D271!important}
+.mage {color: #40C7EB!important}
+.paladin {color: #F58CBA!important}
+.priest {color: #FFFFFF!important}
+.rogue {color: #FFF569!important}
+.shaman {color: #F58CBA!important}
+.warlock {color: #8787ED!important}
+.warrior {color: #C79C6E!important}
+
 </style>
