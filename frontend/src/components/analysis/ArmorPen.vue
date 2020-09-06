@@ -43,7 +43,7 @@
               <div class="md-toolbar-section-end">
                 <div class="tooltip-hotspot">
                   <md-icon>help_outline</md-icon>
-                  <md-tooltip md-direction="top">Armor values as calculated within <strong>this log</strong> only.
+                  <md-tooltip md-direction="top">Armor values as calculated within <strong>this encounter</strong> only.
                   <br>There are rounding errors, a small sample size and some (de)buffs not unaccounted for yet:
                   <br>So this won't always be 100% accurate but should be somewhat close.
                   <br>Fight Club user <strong>sockgirlx</strong> has worked out Skeram to 3009, and all other AQ40 bosses to 3731 armor.</md-tooltip>
@@ -292,18 +292,6 @@ export default {
       }
       this.$set(this.armorGainsLosses, target, tracker)
     }
-
-    console.log('h', this.armorGainsLosses)
-
-    // var aKey = 0
-    // // var trackDebuffs = {}
-    // // var trackArmor = {}
-    // for (let dmg of this.report.fights[this.fightKey].damage) {
-    //   let target = this.getTargetName(dmg.targetID)
-    //   if (target && dmg.ability.type == 1 && !dmg.tick) {
-
-    //   }
-    // }
 
     this.$nextTick(() => {
       window.$WowheadPower.refreshLinks()

@@ -49,7 +49,6 @@ export default {
     this.report = await f.json()
 
     if (this.encounter && this.report.fights[this.encounter - 1]) {
-      console.log(this.report.fights[this.encounter - 1])
       this.selectFight(this.encounter)
     }
   },
@@ -63,15 +62,16 @@ export default {
   watch: {
   '$route.path' (to) {
       let m = to.match(/^\/(.*?)\/(\d+)$/)
-      console.log(m, this.encounter)
       if (m && m[1] == this.wcl) {
         this.$nextTick(function () {
           this.selectFight(parseInt(m[2]))
         })
       }
+      else if (to == `/${this.wcl}`) {
+        this.selectFightID = -1
+      }
     },
     selectFightID (to) {
-      console.log(typeof to, to+1)
       if (this.report.fights[to + 1]) {
       this.selectFight(to + 1)
     }
@@ -80,7 +80,7 @@ export default {
   methods: {
     selectFight: async function (id) {
       let to = `/${this.wcl}/${id}`
-      if (this.$router.history.current.path != to) {
+      if (id && this.$router.history.current.path != to) {
         this.$router.push(to)
       }
       this.fightKey = -1
