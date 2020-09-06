@@ -32,6 +32,7 @@
           </template>
           <p><small>* Expose Armor is assumed to be only used with 5 combo points and with the Improved Expose Armor talent.
           <br>* Currently, only max ranks of Sunder Armor, Expose Armor, Faerie Fire and Curse of Recklessness are tracked.
+          <br>* Damage calculations for Viscidus and C'Thun do not yet account for their reduced damage taken buffs so those numbers are way off.
           <br>* Skeram has an armor value of 3009, other AQ40 bosses have 3731. Other targets use their calculated values you see on the right.</small></p>
         </div>
         <div class="md-layout-item md-size-30 md-small-size-100">
