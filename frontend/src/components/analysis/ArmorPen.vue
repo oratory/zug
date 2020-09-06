@@ -104,10 +104,10 @@ export default {
       else if (debuff.ability.guid==11198 && debuff.type.match(removeDebuff)) {
         armorDebuffs[target].push({type: 'EA', spell: debuff.ability.guid, reduced: 0, time: debuff.timestamp - start })
       }
-      else if (debuff.ability.guid==9907 && debuff.type.match(addDebuff)) {
+      else if ((debuff.ability.guid==9907 || debuff.ability.guid==17392) && debuff.type.match(addDebuff)) {
         armorDebuffs[target].push({type: 'FF', spell: debuff.ability.guid, reduced: 505, time: debuff.timestamp - start })
       }
-      else if (debuff.ability.guid==9907 && debuff.type.match(removeDebuff)) {
+      else if ((debuff.ability.guid==9907 || debuff.ability.guid==17392) && debuff.type.match(removeDebuff)) {
         armorDebuffs[target].push({type: 'FF', spell: debuff.ability.guid, reduced: 0, time: debuff.timestamp - start })
       }
       else if (debuff.ability.guid==11717 && debuff.type.match(addDebuff)) {
@@ -293,6 +293,7 @@ export default {
       }
       this.$set(this.armorGainsLosses, target, tracker)
     }
+    console.log(this.armorGainsLosses)
 
     this.$nextTick(() => {
       window.$WowheadPower.refreshLinks()
