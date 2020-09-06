@@ -292,7 +292,6 @@ export default {
       }
       this.$set(this.armorGainsLosses, target, tracker)
     }
-    console.log(this.armorGainsLosses)
 
     this.$nextTick(() => {
       window.$WowheadPower.refreshLinks()
