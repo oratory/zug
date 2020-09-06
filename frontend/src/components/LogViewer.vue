@@ -16,7 +16,7 @@
           </md-select>
         </md-field>
       </div>
-      <a :href="`https://classic.warcraftlogs.com/reports/${wcl}`" target="_blank" rel="noopener" >View on Warcraft Logs</a>
+      <a :href="`https://classic.warcraftlogs.com/reports/${wcl}#fight=${this.fightKey+1}`" target="_blank" rel="noopener" >View on Warcraft Logs</a>
     </div>
     <div class="md-layout" v-if="report.fights" id="fight-select">
       <div class="md-layout-item" v-for="(fight, key) in bossFights" :key="key" :class="{selected: fightKey+1 === fight.id}" @click="selectFight(fight.id)"><span>{{fight.name}}</span></div>
