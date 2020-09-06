@@ -10,7 +10,21 @@ fastify.decorateReply('cache', require('./middleware/cache'))
 const fastifyStatic = require('fastify-static')
 fastify.register(require('./api'), { prefix: '/api' })
 
-fastify.register(fastifyStatic, {root: path.join(__dirname, 'web/assets'), prefix: '/assets'})
+fastify.register((instance, opts, next) => {
+  instance.register(require('fastify-static'), {
+	root: path.join(__dirname, 'web/assets'),
+	prefix: '/assets/'
+  })
+  next()
+})
+fastify.register((instance, opts, next) => {
+  instance.register(require('fastify-static'), {
+	root: path.join(__dirname, 'web/favico'),
+	prefix: '/favico/'
+  })
+  next()
+})
+
 fastify.get('/:w', async (req, res) => {
   const stream = fs.createReadStream('./web/index.html')
   res.type('text/html').send(stream)

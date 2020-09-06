@@ -1,6 +1,9 @@
 <template>
   <div id="view-log">
-    <h3 v-if="report.title">{{report.title}} - {{new Date(report.start).toLocaleString()}}</h3>
+    <div class="md-layout md-row" id="wcl-title">
+      <h3 v-if="report.title">{{report.title}} - {{new Date(report.start).toLocaleString()}}</h3>
+      <a :href="`https://classic.warcraftlogs.com/reports/${wcl}`" target="_blank" rel="noopener" >View on Warcraft Logs</a>
+    </div>
     <div class="md-layout" v-if="report.fights" id="fight-select">
       <div class="md-layout-item" v-for="(fight, key) in bossFights" :key="key" :class="{selected: fightKey+1 === fight.id}" @click="selectFight(fight.id)"><span>{{fight.name}}</span></div>
     </div>
@@ -85,9 +88,17 @@ export default {
 }
 </script>
 
-<style>
+<style lang="scss">
 h3 {
   margin: 0 0 20px;
+}
+#wcl-title {
+  h3 {
+    flex: 1;
+  }
+  a {
+    font-size: 12px;
+  }
 }
 #fight-select {
   flex-wrap: wrap

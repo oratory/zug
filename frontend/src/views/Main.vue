@@ -1,9 +1,11 @@
 <template>
-  <div id="content">
-    <md-field md-inline id="wcl-input" v-if="!wcl">
-      <label>Enter Warcraft Logs ID or URL</label>
-      <md-input v-model="wclInput"></md-input>
-    </md-field>
+  <div id="main"> 
+    <div id="wcl-input" v-if="!wcl">
+      <md-field md-inline>
+        <label>Enter Warcraft Logs ID or URL</label>
+        <md-input v-model="wclInput"></md-input>
+      </md-field>
+    </div>
     <log-viewer v-else :wcl="wcl" :encounter="encounter"></log-viewer>
   </div>
 </template>
@@ -25,6 +27,11 @@ export default {
     var w = this.validateWCL()
     if (!w && this.wcl) {
       this.$router.push(`/`)
+    }
+    else if (document.querySelector('#wcl-input input')) {      
+      this.$nextTick(() => {
+        document.querySelector('#wcl-input input').focus()
+      })
     }
   },
   watch: {
@@ -59,5 +66,11 @@ export default {
 <style lang="scss">
 #wcl-input {
   margin-top: 20%;
+  padding: 5px;
+  background: #38383855;
+  border-radius: 8px;
+}
+.md-field.md-theme-default:before {
+  display:none
 }
 </style>
