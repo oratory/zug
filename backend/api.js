@@ -9,7 +9,7 @@ module.exports = function (fastify, opts, next) {
       return res.code(404).send({error: 'Invalid ID'})
     }
     try {
-      var report = await redis.get(req.query.id)
+      var report = !req.query.refresh && await redis.get(req.query.id)
       if (!report) {
         console.log(`Fetching WCL: \x1b[33m${req.query.id}\x1b[0m`)
         report = await fetch(`https://classic.warcraftlogs.com/v1/report/fights/${req.query.id}?api_key=${config.wclKey}`)
