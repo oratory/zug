@@ -2,6 +2,17 @@
   <div id="view-log">
     <div class="md-layout md-row" id="wcl-title">
       <h3 v-if="report.title">{{report.title}} - {{new Date(report.start).toLocaleString()}}</h3>
+      <div class="md-layout-item">
+        <md-field>
+          <md-select v-model="selectFightID" id="fightSelect" md-dense>
+            <md-option :value="-1">Select Encounter</md-option>
+            <template v-for="(fight, key) in report.fights">
+              <md-option v-if="fight.wipe" :value="key" v-bind:key="key">{{fight.name}} Wipe</md-option>
+              <md-option v-else :value="key" v-bind:key="key">{{fight.name}} [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
+            </template>
+          </md-select>
+        </md-field>
+      </div>
       <a :href="`https://classic.warcraftlogs.com/reports/${wcl}`" target="_blank" rel="noopener" >View on Warcraft Logs</a>
     </div>
     <div class="md-layout" v-if="report.fights" id="fight-select">
@@ -37,14 +48,16 @@ export default {
     var f = await fetch(`${window.baseURL}/api/report?id=${this.wcl}`)
     this.report = await f.json()
 
-    if (this.encounter && this.report.fights[this.encounter - 1] && this.report.fights[this.encounter - 1].boss && this.report.fights[this.encounter - 1].kill) {
+    if (this.encounter && this.report.fights[this.encounter - 1]) {
+      console.log(this.report.fights[this.encounter - 1])
       this.selectFight(this.encounter)
     }
   },
   data: function () {
     return {
       report: {},
-      fightKey: -1
+      fightKey: -1,
+      selectFightID: 0
     }
   },
   watch: {
@@ -56,6 +69,12 @@ export default {
           this.selectFight(parseInt(m[2]))
         })
       }
+    },
+    selectFightID (to) {
+      console.log(typeof to, to+1)
+      if (this.report.fights[to + 1]) {
+      this.selectFight(to + 1)
+    }
     }
   },
   methods: {
@@ -68,6 +87,7 @@ export default {
       // force analysis to recreate and update
       this.$nextTick(async () => {
         this.fightKey = id - 1
+        this.selectFightID = id - 1
         if (!this.report.fights[this.fightKey].enemyDebuffs) {
           var f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=damage`)
           this.$set(this.report.fights[this.fightKey], 'damage', (await f.json()))
@@ -104,11 +124,28 @@ h3 {
   margin: 0 0 20px;
 }
 #wcl-title {
+  align-items: center;
+  margin-bottom: 10px;
+  justify-content: space-between;
   h3 {
-    flex: 1;
+    margin: 0;
+  }
+  .md-layout-item {
+    flex: 0.5;
   }
   a {
     font-size: 12px;
+  }
+  .md-field {
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+    .md-input {
+      height: 20px;
+      font-size: 14px;
+      color: #DED;
+      -webkit-text-fill-color: #DED;
+    }
   }
 }
 #fight-select {
