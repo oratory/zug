@@ -11,7 +11,7 @@
             <md-option :value="-1">Select Encounter</md-option>
             <template v-for="(fight, key) in report.fights">
               <md-option v-if="fight.wipe" :value="key" v-bind:key="key">{{fight.name}} Wipe</md-option>
-              <md-option v-else :value="key" v-bind:key="key">{{fight.name}} {{key}} [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
+              <md-option v-else :value="key" v-bind:key="key">{{fight.name}} [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
             </template>
           </md-select>
         </md-field>
