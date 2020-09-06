@@ -11,7 +11,7 @@
             <md-option :value="-1">Select Encounter</md-option>
             <template v-for="(fight, key) in report.fights">
               <md-option v-if="fight.wipe" :value="key" v-bind:key="key">{{fight.name}} Wipe</md-option>
-              <md-option v-else :value="key" v-bind:key="key">{{fight.name}} [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
+              <md-option v-else :value="key" v-bind:key="key">{{fight.name}} {{key}} [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
             </template>
           </md-select>
         </md-field>
@@ -75,9 +75,9 @@ export default {
       }
     },
     selectFightID (to) {
-      if (this.report.fights[to + 1]) {
-      this.selectFight(to + 1)
-    }
+      if (this.report.fights[to]) {
+        this.selectFight(to + 1)
+      }
     }
   },
   methods: {
@@ -106,6 +106,11 @@ export default {
           this.$set(this.report.fights[this.fightKey], 'summary', (await f.json()))
         }
       })
+    },
+    refreshReport: async function () {
+      var f = await fetch(`${window.baseURL}/api/report?id=${this.wcl}&refresh=${Date.now()}`)
+      this.report = await f.json()
+      this.selectFight(this.fightKey + 1)
     }
   },
   computed: {
@@ -135,9 +140,14 @@ h3 {
   }
   .md-layout-item {
     flex: 0.5;
+    display: flex;
+    align-items: flex-end;
   }
   a {
     font-size: 12px;
+  }
+  #refreshBtn {
+    margin: 0 5px -8px;
   }
   .md-field {
     margin: 0;

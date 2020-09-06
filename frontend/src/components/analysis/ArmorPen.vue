@@ -8,7 +8,7 @@
       <div class="md-layout md-row">
         <div class="md-layout-item md-size-70 md-small-size-100">
           <template  v-for="(item, target) in armorGainsLosses">
-            <div v-if="item.FF.on || item.CoR.on" v-bind:key="target" class="stats">
+            <div v-if="item.FF.on || item.CoR.on || item.SA.on || item.EA.on" v-bind:key="target" class="stats">
               <strong>Armor Debuffs on {{target}}</strong>
               <p class="cor"><a :href="`https://classic.wowhead.com/spell=${item.CoR.spellID}`">{{item.CoR.spellID}}</a> was active for <strong>{{Math.round(100*item.CoR.on/(item.CoR.on+item.CoR.off)) || 0}}%</strong> of physical attacks:
                 <span v-if="item.CoR.on">This contributed to <strong>{{Math.round(item.CoR.contributed).toLocaleString()}}</strong> damage ({{Math.round(item.CoR.contributed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
@@ -292,6 +292,7 @@ export default {
       }
       this.$set(this.armorGainsLosses, target, tracker)
     }
+    console.log(this.armorGainsLosses)
 
     this.$nextTick(() => {
       window.$WowheadPower.refreshLinks()
