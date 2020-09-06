@@ -12,21 +12,21 @@
               <strong>Armor Debuffs on {{target}}</strong>
               <p class="cor"><a :href="`https://classic.wowhead.com/spell=${item.CoR.spellID}`">{{item.CoR.spellID}}</a> was active for <strong>{{Math.round(100*item.CoR.on/(item.CoR.on+item.CoR.off)) || 0}}%</strong> of physical attacks:
                 <span v-if="item.CoR.on">This contributed to <strong>{{Math.round(item.CoR.contributed).toLocaleString()}}</strong> damage ({{Math.round(item.CoR.contributed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
-                <span v-if="item.CoR.off">With 100% uptime this would have added <strong>{{Math.round(item.CoR.missed).toLocaleString()}}</strong> damage ({{Math.round(item.CoR.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
+                <span v-if="item.CoR.off">With 100% uptime, this would have added <strong>{{Math.round(item.CoR.missed).toLocaleString()}}</strong> damage ({{Math.round(item.CoR.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
               </p>
               <p class="ff"><a :href="`https://classic.wowhead.com/spell=${item.FF.spellID}`">{{item.FF.spellID}}</a> was active for <strong>{{Math.round(100*item.FF.on/(item.FF.on+item.FF.off)) || 0}}%</strong> of physical attacks:
                 <span v-if="item.FF.on">This contributed to <strong>{{Math.round(item.FF.contributed).toLocaleString()}}</strong> damage ({{Math.round(item.FF.contributed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
-                <span v-if="item.FF.off">With 100% uptime this would have added <strong>{{Math.round(item.FF.missed).toLocaleString()}}</strong> damage ({{Math.round(item.FF.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
+                <span v-if="item.FF.off">With 100% uptime, this would have added <strong>{{Math.round(item.FF.missed).toLocaleString()}}</strong> damage ({{Math.round(item.FF.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
               </p>
               <p class="sa"><a :href="`https://classic.wowhead.com/spell=${item.SA.spellID}`">{{item.SA.spellID}}</a> x5 was active for <strong>{{Math.round(100*item.SA.on5/(item.SA.on5+item.SA.on+item.SA.off+item.EA.on)) || 0}}%</strong> of physical attacks:
                 <span v-if="item.SA.contributed5">This contributed to <strong>{{Math.round(item.SA.contributed5).toLocaleString()}}</strong> damage ({{Math.round(item.SA.contributed5/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
                 <span v-else-if="item.SA.contributed">This contributed to <strong>{{Math.round(item.SA.contributed).toLocaleString()}}</strong> damage ({{Math.round(item.SA.contributed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
                 <span v-if="item.SA.on">Less then 5 stacks were active for <strong>{{Math.round(100*item.SA.on/(item.SA.on5+item.SA.on+item.SA.off+item.EA.on)) || 0}}%</strong> of attacks, which could have added <strong>{{Math.round(item.SA.missed).toLocaleString()}}</strong> damage ({{Math.round(item.SA.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
-                <span v-else-if="item.SA.off">With 100% uptime this would have added <strong>{{Math.round(item.SA.missed).toLocaleString()}}</strong> damage ({{Math.round(item.SA.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
+                <span v-else-if="item.SA.off">With 100% uptime<em v-if="item.EA.on"> excluding Expose Armor durations</em>, this would have added <strong>{{Math.round(item.SA.missed).toLocaleString()}}</strong> damage ({{Math.round(item.SA.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
               </p>
               <p class="ea"><a :href="`https://classic.wowhead.com/spell=${item.EA.spellID}`">{{item.EA.spellID}}</a> was active for <strong>{{Math.round(100*item.EA.on/(item.EA.on+item.EA.off)) || 0}}%</strong> of physical attacks:
                 <span v-if="item.EA.on">This contributed to <strong>{{Math.round(item.EA.contributed).toLocaleString()}}</strong> damage ({{Math.round(item.EA.contributed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
-                <span v-if="item.EA.off">With 100% uptime this would have added <strong>{{Math.round(item.EA.missed).toLocaleString()}}</strong> damage ({{Math.round(item.EA.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
+                <span v-if="item.EA.off">With 100% uptime, this would have added <strong>{{Math.round(item.EA.missed).toLocaleString()}}</strong> damage ({{Math.round(item.EA.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
               </p>
             </div>
           </template>
