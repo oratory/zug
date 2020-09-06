@@ -47,6 +47,17 @@ export default {
       fightKey: -1
     }
   },
+  watch: {
+  '$route.path' (to) {
+      let m = to.match(/^\/(.*?)\/(\d+)$/)
+      console.log(m, this.encounter)
+      if (m && m[1] == this.wcl) {
+        this.$nextTick(function () {
+          this.selectFight(parseInt(m[2]))
+        })
+      }
+    }
+  },
   methods: {
     selectFight: async function (id) {
       let to = `/${this.wcl}/${id}`
