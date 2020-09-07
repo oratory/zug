@@ -125,17 +125,10 @@ export default {
     report: Object,
     fightKey: Number
   },
-  created: async function () {
-    var downranked = {}
-    for (let cast of this.report.fights[this.fightKey].casts) {
-      if (lowRanks[cast.ability.guid]) {
-        downranked[cast.sourceID] = downranked[cast.sourceID] || {}
-        downranked[cast.sourceID][cast.ability.guid] = 1
-      }
-    }
-    this.downrankers = downranked
-    this.$nextTick(() => {
-      window.$WowheadPower.refreshLinks()
+  mounted: async function () {
+    this.process()
+    Object.keys(this.$options.props).forEach(key => {
+      this.$watch(key, this.process)
     })
   },
   data: function () {
@@ -144,6 +137,19 @@ export default {
     }
   },
   methods: {
+    process: function () {
+      var downranked = {}
+      for (let cast of this.report.fights[this.fightKey].casts) {
+        if (lowRanks[cast.ability.guid]) {
+          downranked[cast.sourceID] = downranked[cast.sourceID] || {}
+          downranked[cast.sourceID][cast.ability.guid] = 1
+        }
+      }
+      this.downrankers = downranked
+      this.$nextTick(() => {
+        window.$WowheadPower.refreshLinks()
+      })
+    },
     getPlayerName: function (playerID) {
       if (this.report.raid[playerID]) return this.report.raid[playerID].name
       return 'Unknown'

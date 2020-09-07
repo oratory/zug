@@ -7,11 +7,11 @@
           <md-icon>refresh</md-icon>
         </md-button>
         <md-field>
-          <md-select v-model="selectFightID" id="fightSelect" md-dense>
-            <md-option :value="-1">Select Encounter</md-option>
-            <template v-for="(fight, key) in report.fights">
-              <md-option v-if="fight.boss && !fight.kill" :value="key" v-bind:key="key">{{fight.name}} {{Math.round(fight.fightPercentage/100)}}% Wipe [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
-              <md-option v-else :value="key" v-bind:key="key">{{fight.name}} [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
+          <md-select v-model="fightKey" id="fightSelect" md-dense>
+            <md-option :value="0">Select Encounter</md-option>
+            <template v-for="fight in report.fights">
+              <md-option v-if="fight.boss && !fight.kill" :value="fight.id-1" v-bind:key="fight.id">{{fight.name}} {{Math.round(fight.fightPercentage/100)}}% Wipe [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
+              <md-option v-else :value="fight.id-1" v-bind:key="fight.id">{{fight.name}} [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
             </template>
           </md-select>
         </md-field>
@@ -19,7 +19,9 @@
       <a :href="`https://classic.warcraftlogs.com/reports/${wcl}#fight=${this.fightKey+1}`" target="_blank" rel="noopener" >View on Warcraft Logs</a>
     </div>
     <div class="md-layout" v-if="report.fights" id="fight-select">
-      <div class="md-layout-item" v-for="(fight, key) in bossFights" :key="key" :class="{selected: fightKey+1 === fight.id}" @click="selectFight(fight.id)"><span>{{fight.name}}</span></div>
+      <template v-for="fight in report.fights">
+        <div v-if="fight.boss && fight.kill" class="md-layout-item" :key="fight.id" :class="{selected: fightKey+1 === fight.id}" @click="fightKey = fight.id-1"><span>{{fight.name}}</span></div>
+      </template>
     </div>
     <div id="analysis" v-if="fightKey >= 0 && report.fights[fightKey].summary">
       <armor-pen :report="report" :fightKey="fightKey"></armor-pen>
@@ -52,7 +54,8 @@ export default {
     this.report = await f.json()
 
     if (this.encounter && this.report.fights[this.encounter - 1]) {
-      this.selectFight(this.encounter)
+      this.fightKey = this.encounter
+      this.loadFight()
     }
   },
   data: function () {
@@ -67,61 +70,47 @@ export default {
       let m = to.match(/^\/(.*?)\/(\d+)$/)
       if (m && m[1] == this.wcl) {
         this.$nextTick(function () {
-          this.selectFight(parseInt(m[2]))
+          this.fightKey = parseInt(m[2])
         })
       }
       else if (to == `/${this.wcl}`) {
-        this.selectFightID = -1
+        this.selectFightID = 0
       }
     },
-    selectFightID (to) {
-      if (this.report.fights[to]) {
-        this.selectFight(to + 1)
+    fightKey (to) {
+      let pathTo = `/${this.wcl}/${to}`
+      if (to && this.$router.history.current.path != pathTo) {
+        this.$router.push(pathTo)
       }
+      this.$nextTick(this.loadFight)
     }
   },
   methods: {
-    selectFight: async function (id) {
-      let to = `/${this.wcl}/${id}`
-      if (id && this.$router.history.current.path != to) {
-        this.$router.push(to)
+    loadFight: async function () {
+      if (this.fightKey > 0 && !this.report.fights[this.fightKey].enemyDebuffs) {
+        var f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=damage`)
+        this.$set(this.report.fights[this.fightKey], 'damage', (await f.json()))
+        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=enemyDebuffs`)
+        this.$set(this.report.fights[this.fightKey], 'enemyDebuffs', (await f.json()))
+        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=enemySummons`)
+        this.$set(this.report.fights[this.fightKey], 'enemySummons', (await f.json()))
+        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=enemyDeaths`)
+        this.$set(this.report.fights[this.fightKey], 'enemyDeaths', (await f.json()))
+        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=casts`)
+        this.$set(this.report.fights[this.fightKey], 'casts', (await f.json()))
+        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=summary`)
+        this.$set(this.report.fights[this.fightKey], 'summary', (await f.json()))
       }
-      this.fightKey = -1
-      // force analysis to recreate and update
-      this.$nextTick(async () => {
-        this.fightKey = id - 1
-        this.selectFightID = id - 1
-        if (!this.report.fights[this.fightKey].enemyDebuffs) {
-          var f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=damage`)
-          this.$set(this.report.fights[this.fightKey], 'damage', (await f.json()))
-          f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=enemyDebuffs`)
-          this.$set(this.report.fights[this.fightKey], 'enemyDebuffs', (await f.json()))
-          f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=enemySummons`)
-          this.$set(this.report.fights[this.fightKey], 'enemySummons', (await f.json()))
-          f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=enemyDeaths`)
-          this.$set(this.report.fights[this.fightKey], 'enemyDeaths', (await f.json()))
-          f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=casts`)
-          this.$set(this.report.fights[this.fightKey], 'casts', (await f.json()))
-          f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=summary`)
-          this.$set(this.report.fights[this.fightKey], 'summary', (await f.json()))
-        }
-      })
     },
     refreshReport: async function () {
       var f = await fetch(`${window.baseURL}/api/report?id=${this.wcl}&refresh=${Date.now()}`)
       this.report = await f.json()
-      this.selectFight(this.fightKey + 1)
+      this.loadFight()
     }
   },
   computed: {
-    bossFights () {
-      var bosses = []
-      for (let f of this.report.fights) {
-        if (f.boss && f.kill) {
-          bosses.push(f)
-        }
-      }
-      return bosses
+    currentFightKey () {
+      return this.fightKey + 1
     }
   }
 }

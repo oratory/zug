@@ -1,7 +1,7 @@
 <template>
   <div id="armor-pen">
     <md-toolbar class="md-dense">
-      <h3 class="md-title">World Buffs</h3>
+      <h3 class="md-title">Title</h3>
     </md-toolbar>
     <div class="analysis-block"></div>
   </div>

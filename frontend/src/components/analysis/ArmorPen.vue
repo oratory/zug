@@ -76,268 +76,10 @@ export default {
     report: Object,
     fightKey: Number
   },
-  created: async function () {
-    const start = this.report.fights[this.fightKey].start_time
-
-    // track target negative armor values
-    const addDebuff = /^(applydebuff|applydebuffstack|refreshdebuff)$/
-    const removeDebuff = /^(removedebuff)$/
-    var armorDebuffs = {}
-    let sunderStacks = {}
-    for (let debuff of this.report.fights[this.fightKey].enemyDebuffs) {
-      let target = this.getTargetName(debuff.targetID, debuff.targetInstance)
-      if (!armorDebuffs[target]) {
-        armorDebuffs[target] = []
-        sunderStacks[target] = []
-      }
-      if (debuff.ability.guid==11597 && debuff.type.match(addDebuff)) {
-        sunderStacks[target] = Math.min(sunderStacks[target]+1, 5)
-        armorDebuffs[target].push({type: 'SA', spell: debuff.ability.guid, stacks: sunderStacks[target], reduced: sunderStacks[target] * 450, time: debuff.timestamp - start })
-      }
-      else if (debuff.ability.guid==11597 && debuff.type.match(removeDebuff)) {
-        sunderStacks[target] = 0
-        armorDebuffs[target].push({type: 'SA', spell: debuff.ability.guid, stacks: 0, reduced: 0, time: debuff.timestamp - start })
-      }
-      else if (debuff.ability.guid==11198 && debuff.type.match(addDebuff)) {
-        armorDebuffs[target].push({type: 'EA', spell: debuff.ability.guid, reduced: 2550, time: debuff.timestamp - start })
-      }
-      else if (debuff.ability.guid==11198 && debuff.type.match(removeDebuff)) {
-        armorDebuffs[target].push({type: 'EA', spell: debuff.ability.guid, reduced: 0, time: debuff.timestamp - start })
-      }
-      else if ((debuff.ability.guid==9907 || debuff.ability.guid==17392) && debuff.type.match(addDebuff)) {
-        armorDebuffs[target].push({type: 'FF', spell: debuff.ability.guid, reduced: 505, time: debuff.timestamp - start })
-      }
-      else if ((debuff.ability.guid==9907 || debuff.ability.guid==17392) && debuff.type.match(removeDebuff)) {
-        armorDebuffs[target].push({type: 'FF', spell: debuff.ability.guid, reduced: 0, time: debuff.timestamp - start })
-      }
-      else if (debuff.ability.guid==11717 && debuff.type.match(addDebuff)) {
-        armorDebuffs[target].push({type: 'CoR', spell: debuff.ability.guid, reduced: 640, time: debuff.timestamp - start })
-      }
-      else if (debuff.ability.guid==11717 && debuff.type.match(removeDebuff)) {
-        armorDebuffs[target].push({type: 'CoR', spell: debuff.ability.guid, reduced: 0, time: debuff.timestamp - start })
-      }
-      else {
-        continue
-      }
-    }
-
-    // correctly end the target's data on death rather then reset it
-    for (let death of this.report.fights[this.fightKey].enemyDeaths) {
-      let target = this.getTargetName(death.targetID, death.targetInstance)
-      if (armorDebuffs[target]) {
-        var deathEvent = {reduced: this.getArmorReductionAtTime(armorDebuffs[target], death.timestamp - start), time: death.timestamp - start}
-        for (let i = armorDebuffs[target].length - 1; i > 0; i--) {
-          if (death.timestamp - start - 500 <= armorDebuffs[target][i].time) {
-            armorDebuffs[target].pop()
-          }
-          else {
-            armorDebuffs[target].push(deathEvent)
-            break
-          }
-        }
-      }
-    }
-
-    // account for newly spawned adds mid-fight
-    for (let spawn of this.report.fights[this.fightKey].enemySummons) {
-      let target = this.getTargetName(spawn.targetID, spawn.targetInstance)
-      if (armorDebuffs[target]) {
-        armorDebuffs[target].unshift({reduced: 0, time: spawn.timestamp - start })
-      }
-    }
-
-
-    // calculate initial target armor values
-    var targetArmor = {}
-    for (let dmg of this.report.fights[this.fightKey].damage) {
-      let target = this.getTargetName(dmg.targetID)
-      if (target && dmg.ability.type == 1 && !dmg.tick && dmg.mitigated && dmg.unmitigatedAmount > 800) { // reduce rounding errors by setting a minimum value
-        if (!targetArmor[target]) targetArmor[target] = []
-        targetArmor[target].push(Math.round(this.calcArmor(dmg.mitigated / dmg.unmitigatedAmount)) + this.getArmorReductionAtTime(armorDebuffs[target], dmg.timestamp - start))
-      }
-    }
-    // get median datapoint for each target
-    for (let target of Object.keys(targetArmor)) {
-      targetArmor[target].sort()
-      let len = targetArmor[target].length
-      let mid = Math.ceil(len / 2)
-      targetArmor[target] = len % 2 == 0 ? (targetArmor[target][mid] + targetArmor[target][mid - 1]) / 2 : targetArmor[target][mid - 1]
-    }
-    this.targetArmor = targetArmor
-
-
-    var colors = ['#3498DB', '#9B59B6', '#1ABC9C', '#27AE60', '#DC7633', '#E6B0AA', '#D7BDE2', '#A9CCE3', '#A3E4D7', '#F9E79F', '#F5CBA7', '#E5E7E9', '#E74C3C', '#FFFFFF']
-
-    var datasets = []
-    var maxX = 0
-    // plot each target armor
-    for (const target of Object.keys(armorDebuffs)) {
-      var fullArmor = baseArmor[this.targetToGUID(target)] || this.targetArmor[target.replace(/\s#.*/, '')] || 3731
-      var data = []
-      var timePoints = []
-      var tracker = {
-        SA: {
-          on: 0,
-          on5: 0,
-          contributed: 0,
-          contributed5: 0,
-          off: 0,
-          off5: 0,
-          missed: 0,
-          spellID: 11597
-        },
-        EA: {
-          on: 0,
-          contributed: 0,
-          off: 0,
-          missed: 0,
-          spellID: 11198,
-          missedVsSa: 0,
-          contributedVsSA: 0
-        },
-        FF: {
-          on: 0,
-          contributed: 0,
-          off: 0,
-          missed: 0,
-          spellID: 9907
-        },
-        CoR: {
-          on: 0,
-          contributed: 0,
-          off: 0,
-          missed: 0,
-          spellID: 11717
-        }
-      }
-      let prevTime = 0
-      for (let pen of armorDebuffs[target]) {
-        timePoints.push(pen.time)
-        tracker['SA'][pen.time] = tracker['SA'][prevTime] || 0
-        tracker['EA'][pen.time] = tracker['EA'][prevTime] || 0
-        tracker['FF'][pen.time] = tracker['FF'][prevTime] || 0
-        tracker['CoR'][pen.time] = tracker['CoR'][prevTime] || 0
-        if (pen.type) {
-          tracker[pen.type][pen.time] = pen.reduced
-        }
-        prevTime = pen.time
-      }
-      timePoints = [...timePoints]
-      var armorTime = {}
-      for (let time of timePoints) {
-        armorTime[time] = fullArmor - this.getArmorReductionAtTime(armorDebuffs[target], time)
-        data.push({x: time/1000, y: Math.max(0, armorTime[time])})
-      }
-      if (data.length) {
-        if (!target.match(/#/)) {
-          data.unshift({x: 0, y: fullArmor})
-        }
-        datasets.push({label: target, steppedLine: true, borderColor: colors.shift(), fill: false, data: data, yAxisID: 'y-axis-1'})
-        maxX = Math.max(maxX, data[data.length-1].x)
-      }
-
-      tracker.time = 0
-      // one more pass and calculate actual damage gained or missed from each debuff
-      for (let i = 0; i < timePoints.length; i++) {
-        for (let dmg of this.report.fights[this.fightKey].damage) {
-          while (timePoints[i+1] && dmg.timestamp - start >= timePoints[i+1]) {
-            i++
-          }
-          tracker.time = timePoints[i]
-          if (!tracker.firstDamage) {
-            tracker.firstDamage = timePoints[i]
-          }
-          if (dmg.timestamp - start > tracker.time && dmg.ability.type == 1 && dmg.hitType == 1 && !dmg.tick && this.getTargetName(dmg.targetID, dmg.targetInstance) == target) {
-            if (tracker['CoR'][timePoints[i]]) {
-              tracker['CoR'].on++
-              tracker['CoR'].contributed = tracker['CoR'].contributed + Math.max(0, dmg.amount - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 640)))
-            }
-            else {
-              tracker['CoR'].off++
-              tracker['CoR'].missed = tracker['CoR'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 640)) - dmg.amount)
-            }
-            if (tracker['FF'][timePoints[i]]) {
-              tracker['FF'].on++
-              tracker['FF'].contributed = tracker['FF'].contributed + Math.max(0, dmg.amount - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 505)))
-            }
-            else {
-              tracker['FF'].off++
-              tracker['FF'].missed = tracker['FF'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 505)) - dmg.amount)
-            }
-            if (tracker['EA'][timePoints[i]]) {
-              tracker['EA'].on++
-              tracker['EA'].contributed = tracker['EA'].contributed + Math.max(0, dmg.amount - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2550)))
-              tracker['EA'].contributedVsSA = tracker['EA'].contributedVsSA + Math.max(0, dmg.amount - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2550))) - Math.max(0, dmg.unmitigatedAmount - dmg.amount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2250)))
-            }
-            else if (tracker['SA'][timePoints[i]]) {
-              if (tracker['SA'][timePoints[i]] == 2250) {
-                tracker['SA'].on5++
-                tracker['SA'].contributed5 = tracker['SA'].contributed5 + Math.max(0, dmg.amount - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2250)))
-              }
-              else {
-                tracker['SA'].on++
-                tracker['SA'].contributed = tracker['SA'].contributed + Math.max(0, dmg.amount - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + tracker['SA'][timePoints[i]])))
-                tracker['SA'].missed = tracker['SA'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2250)) - dmg.amount)
-              }
-              tracker['EA'].off++
-              tracker['EA'].missed = tracker['EA'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2550)) - dmg.amount)
-            }
-            else {
-              tracker['SA'].off++
-              tracker['SA'].missed = tracker['SA'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2250)) - dmg.amount)
-              tracker['EA'].off++
-              tracker['EA'].missed = tracker['EA'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2550)) - dmg.amount)
-            }
-          }
-        }
-      }
-      this.$set(this.armorGainsLosses, target, tracker)
-    }
-    console.log(this.armorGainsLosses)
-
-    this.$nextTick(() => {
-      window.$WowheadPower.refreshLinks()
-      const ctx = document.getElementById('armorpen-chart')
-      new Chart(ctx, {
-        type: 'line',
-        data: {
-          datasets
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          lineTension: 1,
-          scales: {
-            yAxes: [{
-              id: 'y-axis-1',
-              ticks: {
-                beginAtZero: true
-              },
-              scaleLabel: {
-                display: true,
-                labelString: 'Armor'
-              },
-            }],
-            xAxes: [{
-              type: 'linear',
-              display: true,
-              scaleLabel: {
-                display: true,
-                labelString: 'Time'
-              },
-              ticks: {
-                source: 'auto',
-                max: maxX,
-                stepSize: maxX / 15,
-                major: {
-                  fontStyle: 'bold',
-                  fontColor: '#FF0000'
-                }
-              }
-            }]
-          }
-        },
-      })
+  mounted: async function () {
+    this.process()
+    Object.keys(this.$options.props).forEach(key => {
+      this.$watch(key, this.process)
     })
   },
   data: function () {
@@ -348,6 +90,270 @@ export default {
     }
   },
   methods: {
+    process: function () {      
+      const start = this.report.fights[this.fightKey].start_time
+
+      // track target negative armor values
+      const addDebuff = /^(applydebuff|applydebuffstack|refreshdebuff)$/
+      const removeDebuff = /^(removedebuff)$/
+      var armorDebuffs = {}
+      let sunderStacks = {}
+      for (let debuff of this.report.fights[this.fightKey].enemyDebuffs) {
+        let target = this.getTargetName(debuff.targetID, debuff.targetInstance)
+        if (!armorDebuffs[target]) {
+          armorDebuffs[target] = []
+          sunderStacks[target] = []
+        }
+        if (debuff.ability.guid==11597 && debuff.type.match(addDebuff)) {
+          sunderStacks[target] = Math.min(sunderStacks[target]+1, 5)
+          armorDebuffs[target].push({type: 'SA', spell: debuff.ability.guid, stacks: sunderStacks[target], reduced: sunderStacks[target] * 450, time: debuff.timestamp - start })
+        }
+        else if (debuff.ability.guid==11597 && debuff.type.match(removeDebuff)) {
+          sunderStacks[target] = 0
+          armorDebuffs[target].push({type: 'SA', spell: debuff.ability.guid, stacks: 0, reduced: 0, time: debuff.timestamp - start })
+        }
+        else if (debuff.ability.guid==11198 && debuff.type.match(addDebuff)) {
+          armorDebuffs[target].push({type: 'EA', spell: debuff.ability.guid, reduced: 2550, time: debuff.timestamp - start })
+        }
+        else if (debuff.ability.guid==11198 && debuff.type.match(removeDebuff)) {
+          armorDebuffs[target].push({type: 'EA', spell: debuff.ability.guid, reduced: 0, time: debuff.timestamp - start })
+        }
+        else if ((debuff.ability.guid==9907 || debuff.ability.guid==17392) && debuff.type.match(addDebuff)) {
+          armorDebuffs[target].push({type: 'FF', spell: debuff.ability.guid, reduced: 505, time: debuff.timestamp - start })
+        }
+        else if ((debuff.ability.guid==9907 || debuff.ability.guid==17392) && debuff.type.match(removeDebuff)) {
+          armorDebuffs[target].push({type: 'FF', spell: debuff.ability.guid, reduced: 0, time: debuff.timestamp - start })
+        }
+        else if (debuff.ability.guid==11717 && debuff.type.match(addDebuff)) {
+          armorDebuffs[target].push({type: 'CoR', spell: debuff.ability.guid, reduced: 640, time: debuff.timestamp - start })
+        }
+        else if (debuff.ability.guid==11717 && debuff.type.match(removeDebuff)) {
+          armorDebuffs[target].push({type: 'CoR', spell: debuff.ability.guid, reduced: 0, time: debuff.timestamp - start })
+        }
+        else {
+          continue
+        }
+      }
+
+      // correctly end the target's data on death rather then reset it
+      for (let death of this.report.fights[this.fightKey].enemyDeaths) {
+        let target = this.getTargetName(death.targetID, death.targetInstance)
+        if (armorDebuffs[target]) {
+          var deathEvent = {reduced: this.getArmorReductionAtTime(armorDebuffs[target], death.timestamp - start), time: death.timestamp - start}
+          for (let i = armorDebuffs[target].length - 1; i > 0; i--) {
+            if (death.timestamp - start - 500 <= armorDebuffs[target][i].time) {
+              armorDebuffs[target].pop()
+            }
+            else {
+              armorDebuffs[target].push(deathEvent)
+              break
+            }
+          }
+        }
+      }
+
+      // account for newly spawned adds mid-fight
+      for (let spawn of this.report.fights[this.fightKey].enemySummons) {
+        let target = this.getTargetName(spawn.targetID, spawn.targetInstance)
+        if (armorDebuffs[target]) {
+          armorDebuffs[target].unshift({reduced: 0, time: spawn.timestamp - start })
+        }
+      }
+
+
+      // calculate initial target armor values
+      var targetArmor = {}
+      for (let dmg of this.report.fights[this.fightKey].damage) {
+        let target = this.getTargetName(dmg.targetID)
+        if (target && dmg.ability.type == 1 && !dmg.tick && dmg.mitigated && dmg.unmitigatedAmount > 800) { // reduce rounding errors by setting a minimum value
+          if (!targetArmor[target]) targetArmor[target] = []
+          targetArmor[target].push(Math.round(this.calcArmor(dmg.mitigated / dmg.unmitigatedAmount)) + this.getArmorReductionAtTime(armorDebuffs[target], dmg.timestamp - start))
+        }
+      }
+      // get median datapoint for each target
+      for (let target of Object.keys(targetArmor)) {
+        targetArmor[target].sort()
+        let len = targetArmor[target].length
+        let mid = Math.ceil(len / 2)
+        targetArmor[target] = len % 2 == 0 ? (targetArmor[target][mid] + targetArmor[target][mid - 1]) / 2 : targetArmor[target][mid - 1]
+      }
+      this.targetArmor = targetArmor
+
+
+      var colors = ['#3498DB', '#9B59B6', '#1ABC9C', '#27AE60', '#DC7633', '#E6B0AA', '#D7BDE2', '#A9CCE3', '#A3E4D7', '#F9E79F', '#F5CBA7', '#E5E7E9', '#E74C3C', '#FFFFFF']
+
+      var datasets = []
+      var maxX = 0
+      // plot each target armor
+      for (const target of Object.keys(armorDebuffs)) {
+        var fullArmor = baseArmor[this.targetToGUID(target)] || this.targetArmor[target.replace(/\s#.*/, '')] || 3731
+        var data = []
+        var timePoints = []
+        var tracker = {
+          SA: {
+            on: 0,
+            on5: 0,
+            contributed: 0,
+            contributed5: 0,
+            off: 0,
+            off5: 0,
+            missed: 0,
+            spellID: 11597
+          },
+          EA: {
+            on: 0,
+            contributed: 0,
+            off: 0,
+            missed: 0,
+            spellID: 11198,
+            missedVsSa: 0,
+            contributedVsSA: 0
+          },
+          FF: {
+            on: 0,
+            contributed: 0,
+            off: 0,
+            missed: 0,
+            spellID: 9907
+          },
+          CoR: {
+            on: 0,
+            contributed: 0,
+            off: 0,
+            missed: 0,
+            spellID: 11717
+          }
+        }
+        let prevTime = 0
+        for (let pen of armorDebuffs[target]) {
+          timePoints.push(pen.time)
+          tracker['SA'][pen.time] = tracker['SA'][prevTime] || 0
+          tracker['EA'][pen.time] = tracker['EA'][prevTime] || 0
+          tracker['FF'][pen.time] = tracker['FF'][prevTime] || 0
+          tracker['CoR'][pen.time] = tracker['CoR'][prevTime] || 0
+          if (pen.type) {
+            tracker[pen.type][pen.time] = pen.reduced
+          }
+          prevTime = pen.time
+        }
+        timePoints = [...timePoints]
+        var armorTime = {}
+        for (let time of timePoints) {
+          armorTime[time] = fullArmor - this.getArmorReductionAtTime(armorDebuffs[target], time)
+          data.push({x: time/1000, y: Math.max(0, armorTime[time])})
+        }
+        if (data.length) {
+          if (!target.match(/#/)) {
+            data.unshift({x: 0, y: fullArmor})
+          }
+          datasets.push({label: target, steppedLine: true, borderColor: colors.shift(), fill: false, data: data, yAxisID: 'y-axis-1'})
+          maxX = Math.max(maxX, data[data.length-1].x)
+        }
+
+        tracker.time = 0
+        // one more pass and calculate actual damage gained or missed from each debuff
+        for (let i = 0; i < timePoints.length; i++) {
+          for (let dmg of this.report.fights[this.fightKey].damage) {
+            while (timePoints[i+1] && dmg.timestamp - start >= timePoints[i+1]) {
+              i++
+            }
+            tracker.time = timePoints[i]
+            if (!tracker.firstDamage) {
+              tracker.firstDamage = timePoints[i]
+            }
+            if (dmg.timestamp - start > tracker.time && dmg.ability.type == 1 && dmg.hitType == 1 && !dmg.tick && this.getTargetName(dmg.targetID, dmg.targetInstance) == target) {
+              if (tracker['CoR'][timePoints[i]]) {
+                tracker['CoR'].on++
+                tracker['CoR'].contributed = tracker['CoR'].contributed + Math.max(0, dmg.amount - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 640)))
+              }
+              else {
+                tracker['CoR'].off++
+                tracker['CoR'].missed = tracker['CoR'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 640)) - dmg.amount)
+              }
+              if (tracker['FF'][timePoints[i]]) {
+                tracker['FF'].on++
+                tracker['FF'].contributed = tracker['FF'].contributed + Math.max(0, dmg.amount - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 505)))
+              }
+              else {
+                tracker['FF'].off++
+                tracker['FF'].missed = tracker['FF'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 505)) - dmg.amount)
+              }
+              if (tracker['EA'][timePoints[i]]) {
+                tracker['EA'].on++
+                tracker['EA'].contributed = tracker['EA'].contributed + Math.max(0, dmg.amount - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2550)))
+                tracker['EA'].contributedVsSA = tracker['EA'].contributedVsSA + Math.max(0, dmg.amount - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2550))) - Math.max(0, dmg.unmitigatedAmount - dmg.amount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2250)))
+              }
+              else if (tracker['SA'][timePoints[i]]) {
+                if (tracker['SA'][timePoints[i]] == 2250) {
+                  tracker['SA'].on5++
+                  tracker['SA'].contributed5 = tracker['SA'].contributed5 + Math.max(0, dmg.amount - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2250)))
+                }
+                else {
+                  tracker['SA'].on++
+                  tracker['SA'].contributed = tracker['SA'].contributed + Math.max(0, dmg.amount - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + tracker['SA'][timePoints[i]])))
+                  tracker['SA'].missed = tracker['SA'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2250)) - dmg.amount)
+                }
+                tracker['EA'].off++
+                tracker['EA'].missed = tracker['EA'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2550)) - dmg.amount)
+              }
+              else {
+                tracker['SA'].off++
+                tracker['SA'].missed = tracker['SA'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2250)) - dmg.amount)
+                tracker['EA'].off++
+                tracker['EA'].missed = tracker['EA'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2550)) - dmg.amount)
+              }
+            }
+          }
+        }
+        this.$set(this.armorGainsLosses, target, tracker)
+      }
+      console.log(this.armorGainsLosses)
+
+      this.$nextTick(() => {
+        window.$WowheadPower.refreshLinks()
+        const ctx = document.getElementById('armorpen-chart')
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            lineTension: 1,
+            scales: {
+              yAxes: [{
+                id: 'y-axis-1',
+                ticks: {
+                  beginAtZero: true
+                },
+                scaleLabel: {
+                  display: true,
+                  labelString: 'Armor'
+                },
+              }],
+              xAxes: [{
+                type: 'linear',
+                display: true,
+                scaleLabel: {
+                  display: true,
+                  labelString: 'Time'
+                },
+                ticks: {
+                  source: 'auto',
+                  max: maxX,
+                  stepSize: maxX / 15,
+                  major: {
+                    fontStyle: 'bold',
+                    fontColor: '#FF0000'
+                  }
+                }
+              }]
+            }
+          },
+        })
+      })
+    },
     getTargetName: function (targetID, instance) {
       if (this.report.raid[targetID]) return false
       if (instance) {
