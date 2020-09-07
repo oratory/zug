@@ -1,4 +1,4 @@
-## zugz.ug - Log Analysis Tool for World of Warcraft Classic
+## [zugz.ug](https://zugz.ug) - Log Analysis Tool for World of Warcraft Classic
 
 ### Local Environment
 Looking to help with the site? To get this running locally you'll need NodeJS, a Redis server and a warcraftlogs.com API key.
@@ -35,4 +35,4 @@ npm run build
 
 ### Attributions
 
-Thanks to SVGBackgrounds.com for some stylish background SVGs.
+Thanks to [SVGBackgrounds.com](https://svgbackgrounds.com) for some stylish background SVGs.
