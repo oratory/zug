@@ -11,7 +11,7 @@ module.exports = function (fastify, opts, next) {
     try {
       var report = !req.query.refresh && await redis.get(req.query.id)
       if (!report) {
-        console.log(`Fetching WCL: \x1b[33m${req.query.id}\x1b[0m`)
+        console.log((new Date()).toISOString(), `Fetching WCL: \x1b[33m${req.query.id}\x1b[0m`)
         report = await fetch(`https://classic.warcraftlogs.com/v1/report/fights/${req.query.id}?api_key=${config.wclKey}`)
         report = await report.json()
   
@@ -24,6 +24,9 @@ module.exports = function (fastify, opts, next) {
         }
         delete report.friendlies
         delete report.exportedCharacters
+        if (Date.now() - report.end < 3600 * 1000) {
+          report.refresh = true
+        }
       }
       redis.set(req.query.id, report)
       res.cache(3600*24).send(report)
@@ -82,7 +85,7 @@ module.exports = function (fastify, opts, next) {
       if (!report.fights[fightKey]) {
         return res.code(400).send({error: 'Invalid request'})
       }
-      console.log(`Fetching WCL: \x1b[33m${req.query.id}\x1b[0m/\x1b[36m${fightKey+1}\x1b[0m/\x1b[35m${eventType}\x1b[0m`)
+      console.log((new Date()).toISOString(), `Fetching WCL: \x1b[33m${req.query.id}\x1b[0m/\x1b[36m${fightKey+1}\x1b[0m/\x1b[35m${eventType}\x1b[0m`)
       events = await fetch(`https://classic.warcraftlogs.com/v1/report/events/${eventType}/${req.query.id}?start=${report.fights[fightKey].start_time}&end=${usePaging && report.fights[fightKey].end_time || report.fights[fightKey].start_time}${addQuery}&api_key=${config.wclKey}`)
       events = await events.json()
       delete events.auraAbilities

@@ -10,8 +10,8 @@
           <md-select v-model="fightKey" id="fightSelect" md-dense>
             <md-option :value="0">Select Encounter</md-option>
             <template v-for="fight in report.fights">
-              <md-option v-if="fight.boss && !fight.kill" :value="fight.id-1" v-bind:key="fight.id">{{fight.name}} {{Math.round(fight.fightPercentage/100)}}% Wipe [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
-              <md-option v-else :value="fight.id-1" v-bind:key="fight.id">{{fight.name}} [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
+              <md-option v-if="fight.boss && !fight.kill" :value="fight.id" v-bind:key="fight.id">{{fight.name}} {{Math.round(fight.fightPercentage/100)}}% Wipe [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
+              <md-option v-else :value="fight.id" v-bind:key="fight.id">{{fight.name}} [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
             </template>
           </md-select>
         </md-field>
@@ -20,18 +20,17 @@
     </div>
     <div class="md-layout" v-if="report.fights" id="fight-select">
       <template v-for="fight in report.fights">
-        <div v-if="fight.boss && fight.kill" class="md-layout-item" :key="fight.id" :class="{selected: fightKey+1 === fight.id}" @click="fightKey = fight.id-1"><span>{{fight.name}}</span></div>
+        <div v-if="fight.boss && fight.kill" class="md-layout-item" :key="fight.id" :class="{selected: fightKey === fight.id}" @click="fightKey = fight.id"><span>{{fight.name}}</span></div>
       </template>
     </div>
-    <div id="analysis" v-if="fightKey >= 0 && report.fights[fightKey].summary">
-      <armor-pen :report="report" :fightKey="fightKey"></armor-pen>
-      <ability-use :report="report" :fightKey="fightKey"></ability-use>
-      <world-buffs :report="report" :fightKey="fightKey"></world-buffs>
+    <div id="analysis" v-if="fightKey && report.fights && report.fights[fightKey-1] && report.fights[fightKey-1].summary">
+      <armor-pen :report="report" :fightKey="fightKey-1"></armor-pen>
+      <ability-use :report="report" :fightKey="fightKey-1"></ability-use>
+      <world-buffs :report="report" :fightKey="fightKey-1"></world-buffs>
     </div>
-    <loading  v-if="fightKey >= 0 && !report.fights[fightKey].summary">Fetching data...</loading>
+    <loading v-if="fightKey && (!report.fights[fightKey-1] || !report.fights[fightKey-1].summary)">Fetching data...</loading>
   </div>
 </template>
-
 <script>
 import AbilityUse from '@/components/analysis/AbilityUse.vue'
 import ArmorPen from '@/components/analysis/ArmorPen.vue'
@@ -52,7 +51,6 @@ export default {
   created: async function () {
     var f = await fetch(`${window.baseURL}/api/report?id=${this.wcl}`)
     this.report = await f.json()
-
     if (this.encounter && this.report.fights[this.encounter - 1]) {
       this.fightKey = this.encounter
       this.loadFight()
@@ -61,8 +59,7 @@ export default {
   data: function () {
     return {
       report: {},
-      fightKey: -1,
-      selectFightID: 0
+      fightKey: 0
     }
   },
   watch: {
@@ -72,9 +69,6 @@ export default {
         this.$nextTick(function () {
           this.fightKey = parseInt(m[2])
         })
-      }
-      else if (to == `/${this.wcl}`) {
-        this.selectFightID = 0
       }
     },
     fightKey (to) {
@@ -87,19 +81,21 @@ export default {
   },
   methods: {
     loadFight: async function () {
-      if (this.fightKey > 0 && !this.report.fights[this.fightKey].enemyDebuffs) {
-        var f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=damage`)
-        this.$set(this.report.fights[this.fightKey], 'damage', (await f.json()))
-        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=enemyDebuffs`)
-        this.$set(this.report.fights[this.fightKey], 'enemyDebuffs', (await f.json()))
-        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=enemySummons`)
-        this.$set(this.report.fights[this.fightKey], 'enemySummons', (await f.json()))
-        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=enemyDeaths`)
-        this.$set(this.report.fights[this.fightKey], 'enemyDeaths', (await f.json()))
-        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=casts`)
-        this.$set(this.report.fights[this.fightKey], 'casts', (await f.json()))
-        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${this.fightKey}&type=summary`)
-        this.$set(this.report.fights[this.fightKey], 'summary', (await f.json()))
+      let id = this.fightKey - 1
+      console.log(this.report.fights, id)
+      if (this.fightKey && !this.report.fights[id].enemyDebuffs) {
+        var f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${id}&type=damage`)
+        this.$set(this.report.fights[id], 'damage', (await f.json()))
+        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${id}&type=enemyDebuffs`)
+        this.$set(this.report.fights[id], 'enemyDebuffs', (await f.json()))
+        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${id}&type=enemySummons`)
+        this.$set(this.report.fights[id], 'enemySummons', (await f.json()))
+        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${id}&type=enemyDeaths`)
+        this.$set(this.report.fights[id], 'enemyDeaths', (await f.json()))
+        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${id}&type=casts`)
+        this.$set(this.report.fights[id], 'casts', (await f.json()))
+        f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${id}&type=summary`)
+        this.$set(this.report.fights[id], 'summary', (await f.json()))
       }
     },
     refreshReport: async function () {
