@@ -3,7 +3,7 @@
     <div class="md-layout md-row" id="wcl-title">
       <h3 v-if="report.title">{{report.title}} - {{new Date(report.start).toLocaleString()}}</h3>
       <div class="md-layout-item">
-        <md-button class="md-icon-button" id="refreshBtn" @click="refreshReport()" v-if="report.end + 3600000*4 > Date.now()">
+        <md-button class="md-icon-button" id="refreshBtn" @click="refreshReport()" v-if="report.refresh">
           <md-icon>refresh</md-icon>
         </md-button>
         <md-field>
