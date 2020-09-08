@@ -15,7 +15,7 @@
           </div>
         </div>
       </template>
-      <p><small>* Currently, only warrior abilities are looked at.</small></p>
+      <p><small>* Currently, only rogue and warrior abilities are looked at.</small></p>
     </div>
   </div>
 </template>

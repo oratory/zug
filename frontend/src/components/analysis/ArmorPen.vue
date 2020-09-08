@@ -4,7 +4,10 @@
       <h3 class="md-title">Enemy Armor</h3>
     </md-toolbar>
     <div class="analysis-block">
-      <div id="armorpen-chart-container"><canvas id="armorpen-chart"></canvas></div>
+      <div id="armorpen-chart-container">
+        <canvas id="armorpen-chart"></canvas>
+        <div id="chartjs-tooltip-armorpen"></div>
+    </div>
       <div class="md-layout md-row">
         <div class="md-layout-item md-size-70 md-small-size-100">
           <template  v-for="(item, target) in armorGainsLosses">
@@ -246,7 +249,7 @@ export default {
           if (!target.match(/#/)) {
             data.unshift({x: 0, y: fullArmor})
           }
-          datasets.push({label: target, steppedLine: true, borderColor: colors.shift(), fill: false, data: data, yAxisID: 'y-axis-1'})
+          datasets.push({label: target, steppedLine: true, borderColor: colors.shift(), fill: false, data: data, yAxisID: 'y-axis-1', showLine: true})
           maxX = Math.max(maxX, data[data.length-1].x)
         }
 
@@ -307,11 +310,12 @@ export default {
         }
         this.$set(this.armorGainsLosses, target, tracker)
       }
-      console.log(this.armorGainsLosses)
 
       this.$nextTick(() => {
+        const armorGainsLosses = this.armorGainsLosses
         window.$WowheadPower.refreshLinks()
         const ctx = document.getElementById('armorpen-chart')
+        console.log(datasets)
         new Chart(ctx, {
           type: 'line',
           data: {
@@ -349,6 +353,78 @@ export default {
                   }
                 }
               }]
+            },
+            tooltips: {
+              enabled: false,
+              position: 'nearest',
+              mode: 'x',
+              intersect: false,
+              custom: function (tooltip) {
+                if (!tooltip.title) {
+                  return
+                }
+                console.log(tooltip)
+                const time = parseFloat(tooltip.title[0]) * 1000
+                // Tooltip Element
+                var tooltipEl = document.getElementById('chartjs-tooltip-armorpen')
+                // Hide if no tooltip
+                if (tooltip.opacity === 0) {
+                  tooltipEl.style.opacity = 0
+                  return
+                }
+                // Set caret Position
+                tooltipEl.classList.remove('above', 'below', 'no-transform');
+                if (tooltip.yAlign) {
+                  tooltipEl.classList.add(tooltip.yAlign)
+                } else {
+                  tooltipEl.classList.add('no-transform')
+                }
+                // Set Text
+                if (tooltip.body) {
+                  var innerHtml = ''
+                  var keepUnique = {} // why do some points double up?
+                  for (let i = 0; i < tooltip.body.length; i++) {
+                    if (time/1000 != tooltip.dataPoints[i].xLabel) {
+                      // continue
+                    }
+                    for (const line of tooltip.body[i].lines) {
+                      let m = line.match(/^(.*?):\s*(\d+)$/)
+                      if (armorGainsLosses[m[1]] && !keepUnique[m[1]]) {
+                        keepUnique[m[1]] = true
+                        var content = `<strong style="color:${tooltip.labelColors[i].borderColor}">${m[1]}</strong><br>${m[2]} armor @ ${time/1000}s`
+                        var debuffs = ''
+                        if (armorGainsLosses[m[1]].CoR[time]) {
+                          debuffs += ' <img src="/assets/spell_shadow_unholystrength.gif" style="vertical-align:middle">'
+                        }
+                        if (armorGainsLosses[m[1]].FF[time]) {
+                          debuffs += ' <img src="/assets/spell_nature_faeriefire.gif" style="vertical-align:middle">'
+                        }
+                        if (armorGainsLosses[m[1]].SA[time]) {
+                          debuffs += ' <img src="/assets/ability_warrior_sunder.gif" style="vertical-align:middle"><strong>x' + armorGainsLosses[m[1]].SA[time] / 450 + '</strong>'
+                        }
+                        if (armorGainsLosses[m[1]].EA[time]) {
+                          debuffs += ' <img src="/assets/ability_warrior_riposte.gif">'
+                        }
+                        if (debuffs) {
+                          debuffs = '<br>' + debuffs
+                        }
+                        if (innerHtml) {
+                          innerHtml += '<div style="border-top: 1px solid #333">' + content + debuffs + '</div>'
+                        }
+                        else {
+                          innerHtml += '<div>' + content + debuffs + '</div>'
+                        }
+                      }
+                    }
+                  }
+                  tooltipEl.innerHTML = innerHtml
+                }
+                // var position = this._chart.canvas.getBoundingClientRect()
+                // Display, position, and set styles for font
+                tooltipEl.style.opacity = 1
+                tooltipEl.style.left = tooltip.caretX + 'px'
+                tooltipEl.style.top = tooltip.caretY + 'px'
+              }
             }
           },
         })
@@ -432,6 +508,7 @@ export default {
 @media (min-width: 1200px) {
   #armorpen-chart-container {
     padding: 10px 20px;
+    position: relative;
   }
 }
 canvas, #armorpen-chart-container {
@@ -440,7 +517,45 @@ canvas, #armorpen-chart-container {
   max-height: 400px;
   width: 100%;
   position: relative;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
 }
+#chartjs-tooltip-armorpen {
+  opacity: 1;
+  position: absolute;
+  background: rgba(0, 0, 0, .7);
+  color: white;
+  border-radius: 4px;
+  padding: 4px;
+  font-size: 12px;
+  -webkit-transition: all .1s ease;
+  transition: all .1s ease;
+  pointer-events: none;
+  transform: translate(50%, 0);
+  white-space: nowrap;
+  z-index: 99;
+
+  :after {
+    content: "";
+    display: block;
+    height: 6px;
+    width: 6px;
+    left: -2px;
+    margin-left: 0;
+    margin-top: -3px;
+    background: rgba(0, 0, 0, .3);
+    position: absolute;
+    top: 20px;
+    -webkit-transform: rotate(45deg);
+    -moz-transform: rotate(45deg);
+    -ms-transform: rotate(45deg);
+    -o-transform: rotate(45deg);
+    transform: rotate(45deg);
+  }
+}
+
+
 .analysis-block {
   min-height: 250px;
   border: 1px solid var(--md-theme-default-toolbarvariant, #212121);
