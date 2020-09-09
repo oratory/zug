@@ -1,7 +1,8 @@
 const fs = require('fs')
 const path = require('path')
 global.config = JSON.parse(fs.readFileSync('../config.json'))
-global.redis = require('./redis')
+global.wcl = require('./wcl')
+global.gql = require('graphql-request').gql
   
 const fastify = require('fastify')()
 fastify.register(require('fastify-cors'), {origin: true})

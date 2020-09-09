@@ -1,6 +1,49 @@
 const fetch = require('node-fetch')
+const wcl = require('./wcl')
 const regex = {
   wcl: /^[a-zA-Z0-9]{16}$/,
+}
+
+async function getReport(code, skipCache) {
+  return await wcl.query(gql`query ($code: String!) {
+    reportData {
+      report(code: $code) {
+        title
+        startTime
+        endTime
+        guild {
+          id
+          name
+          faction {
+            id
+          }
+        }
+        fights {
+          id
+          encounterID
+          startTime
+          endTime
+          name
+          kill
+          bossPercentage
+        }
+        masterData {
+          actors {
+            id
+            gameID
+            name
+            type
+            subType
+            petOwner
+          }
+          abilities {
+            gameID
+            type
+          }
+        }
+      }
+    }
+  }`, {skipCache, vars: {code}})
 }
 
 module.exports = function (fastify, opts, next) {
@@ -9,96 +52,128 @@ module.exports = function (fastify, opts, next) {
       return res.code(404).send({error: 'Invalid ID'})
     }
     try {
-      var report = !req.query.refresh && await redis.get(req.query.id)
-      if (!report) {
-        console.log((new Date()).toISOString(), `Fetching WCL: \x1b[33m${req.query.id}\x1b[0m`)
-        report = await fetch(`https://classic.warcraftlogs.com/v1/report/fights/${req.query.id}?api_key=${config.wclKey}`)
-        report = await report.json()
-  
-        report.raid = {}
-        for (let i = 0; i < report.friendlies.length; i++) {
-          delete report.friendlies[i].fights
-          delete report.friendlies[i].server
-          report.raid[report.friendlies[i].id] = report.friendlies[i]
-          delete report.raid[report.friendlies[i].id].id
-        }
-        delete report.friendlies
-        delete report.exportedCharacters
-        if (Date.now() - report.end < 3600 * 1000) {
-          report.refresh = true
-        }
+      const report = await getReport(req.query.id, req.query.refresh)
+      // if the report is recent it may be a live report and still updating so use a short browser cache time
+      if (Date.now() - report.reportData.report.endTime < 1800 * 1000) {
+        return res.cache(60).send(report)
       }
-      redis.set(req.query.id, report)
-      res.cache(3600*24).send(report)
+      return res.cache(3600*24*30).send(report)
     }
     catch (e) {
       console.log(e)
-      res.code(500)
-      res.send({error: e.message})
+      return res.code(500).send({error: e.message})
     }
   })
 
   fastify.get('/events', async function (req, res) {
-    if (!req.query.id.match(regex.wcl) || !(parseInt(req.query.fight) > -1) || !req.query.type.match(regex.events)) {
+    if (!req.query.id.match(regex.wcl) || !(parseInt(req.query.fight) > -1)) {
       return res.code(404).send({error: 'Invalid request'})
     }
     try {
+      const report = await getReport(req.query.id)
+      if (!report || report.error) {
+        return res.code(500).send(report)
+      }
+      var fightKey = parseInt(req.query.fight)
+      if (!report.reportData.report.fights[fightKey]) {
+        return res.code(404).send({error: 'Invalid request'})
+      }
+
+
       var eventType
       var addQuery = ''
       var usePaging = true
+      var query
+      var queryVars = {
+        code: req.query.id,
+        start: report.reportData.report.fights[fightKey].startTime,
+        end: report.reportData.report.fights[fightKey].endTime
+      }
       switch (req.query.type) {
         case 'summary':
-          eventType = 'summary'
-          usePaging = false
+          query = gql`query ($code: String!, $start: Float!, $end: Float!) {
+            reportData {
+              report(code: $code) {
+                events(dataType: CombatantInfo, startTime: $start, endTime: $end) {
+                  data
+                }
+              }
+            }
+          }`
           break
         case 'damage':
-          eventType = 'damage-done'
-        break
+          query = gql`query ($code: String!, $start: Float!, $end: Float!) {
+            reportData {
+              report(code: $code) {
+                events(dataType: DamageDone, startTime: $start, endTime: $end) {
+                  data
+                  nextPageTimestamp
+                }
+              }
+            }
+          }`
+          break
         case 'casts':
-          eventType = 'casts'
+          query = gql`query ($code: String!, $start: Float!, $end: Float!) {
+            reportData {
+              report(code: $code) {
+                events(dataType: Casts, startTime: $start, endTime: $end) {
+                  data
+                  nextPageTimestamp
+                }
+              }
+            }
+          }`
           break
         case 'enemyDeaths':
-          eventType = 'deaths'
-          addQuery = '&hostility=1'
+          query = gql`query ($code: String!, $start: Float!, $end: Float!) {
+            reportData {
+              report(code: $code) {
+                events(dataType: Deaths, hostilityType: Enemies, startTime: $start, endTime: $end) {
+                  data
+                  nextPageTimestamp
+                }
+              }
+            }
+          }`
           break
         case 'enemySummons':
-          eventType = 'summons'
-          addQuery = '&hostility=1'
+          query = gql`query ($code: String!, $start: Float!, $end: Float!) {
+            reportData {
+              report(code: $code) {
+                events(dataType: Summons, hostilityType: Enemies, startTime: $start, endTime: $end) {
+                  data
+                  nextPageTimestamp
+                }
+              }
+            }
+          }`
           break
         case 'enemyDebuffs':
-          eventType = 'debuffs'
-          addQuery = '&hostility=1'
+          query = gql`query ($code: String!, $start: Float!, $end: Float!) {
+            reportData {
+              report(code: $code) {
+                events(dataType: Debuffs, hostilityType: Enemies, startTime: $start, endTime: $end) {
+                  data
+                  nextPageTimestamp
+                }
+              }
+            }
+          }`
           break
         default:
           return res.code(404).send({error: 'Invalid request'})
       }
-      var fightKey = parseInt(req.query.fight)
-      const redisKey = `${req.query.id}:${fightKey}:${req.query.type}`
-      var events = await redis.get(redisKey)
-      if (events) {
-        return res.cache(3600*24).send(events)
+      var events = await wcl.query(query, {vars: queryVars})
+      
+      while (events.reportData.report.events.nextPageTimestamp && events.reportData.report.events.nextPageTimestamp > queryVars.start) {
+        queryVars.start = events.reportData.report.events.nextPageTimestamp
+        let next = await wcl.query(query, {vars: queryVars})
+        events.reportData.report.events.data = events.reportData.report.events.data.concat(next.reportData.report.events.data)
+        events.reportData.report.events.nextPageTimestamp = next.reportData.report.events.nextPageTimestamp
       }
-      var report = await redis.get(req.query.id)
-      if (!report) {
-        return res.code(400).send({error: 'Invalid request'})
-      }
-      if (!report.fights[fightKey]) {
-        return res.code(400).send({error: 'Invalid request'})
-      }
-      console.log((new Date()).toISOString(), `Fetching WCL: \x1b[33m${req.query.id}\x1b[0m/\x1b[36m${fightKey+1}\x1b[0m/\x1b[35m${eventType}\x1b[0m`)
-      events = await fetch(`https://classic.warcraftlogs.com/v1/report/events/${eventType}/${req.query.id}?start=${report.fights[fightKey].start_time}&end=${usePaging && report.fights[fightKey].end_time || report.fights[fightKey].start_time}${addQuery}&api_key=${config.wclKey}`)
-      events = await events.json()
-      delete events.auraAbilities
+      events = events.reportData.report.events.data
 
-      while (events.nextPageTimestamp) {
-        let next = await fetch(`https://classic.warcraftlogs.com/v1/report/events/${eventType}/${req.query.id}?start=${events.nextPageTimestamp}&end=${report.fights[fightKey].end_time}${addQuery}&api_key=${config.wclKey}`)
-        next = await next.json()
-        events.events = events.events.concat(next.events)
-        events.nextPageTimestamp = next.nextPageTimestamp
-      }
-      events = events.events
-
-      redis.set(redisKey, events)
       res.cache(3600*24).send(events)
     }
     catch (e) {

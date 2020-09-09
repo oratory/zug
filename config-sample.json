@@ -1,6 +1,9 @@
 {
   "redis": null,
-  "wclKey": "",
+  "wcl": {
+    "id": "",
+    "secret": ""
+  },
   "frontend": {
     "port": 7000
   },

@@ -8,7 +8,7 @@
         <h3>Higher rank abilities are available for training!</h3>
         <div class="md-layout md-row"> 
           <div v-for="(abilities, playerID, i) in downrankers" v-bind:key="playerID" class="playerDownrank md-layout-item md-small-size-100">
-            <p><strong :class="report.raid[playerID].type.toLowerCase()">{{report.raid[playerID].name}}</strong></p>
+            <p><strong :class="report.masterData.actors[playerID].subType.toLowerCase()">{{report.masterData.actors[playerID].name}}</strong></p>
             <ul>
               <li v-for="(k, spell) in abilities" v-bind:key="i+'-'+spell" ><a :href="`https://classic.wowhead.com/spell=${spell}`">{{spell}}</a></li>
             </ul>
@@ -44,23 +44,15 @@ export default {
     process: function () {
       var downranked = {}
       for (let cast of this.report.fights[this.fightKey].casts) {
-        if (lowRanks[cast.ability.guid]) {
+        if (lowRanks[cast.abilityGameID]) {
           downranked[cast.sourceID] = downranked[cast.sourceID] || {}
-          downranked[cast.sourceID][cast.ability.guid] = 1
+          downranked[cast.sourceID][cast.abilityGameID] = 1
         }
       }
       this.downrankers = downranked
       this.$nextTick(() => {
         window.$WowheadPower.refreshLinks()
       })
-    },
-    getPlayerName: function (playerID) {
-      if (this.report.raid[playerID]) return this.report.raid[playerID].name
-      return 'Unknown'
-    },
-    getPlayerClass: function (playerID) {
-      if (this.report.raid[playerID]) return this.report.raid[playerID].type.toLowerCase()
-      return 'Unknown'
     }
   }
 }

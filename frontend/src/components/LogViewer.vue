@@ -1,17 +1,17 @@
 <template>
   <div id="view-log">
     <div class="md-layout md-row" id="wcl-title">
-      <h3 v-if="report.title">{{report.title}} - {{new Date(report.start).toLocaleString()}}</h3>
+      <h3 v-if="report.title">{{report.title}} - {{new Date(report.startTime).toLocaleString()}}</h3>
       <div class="md-layout-item">
-        <md-button class="md-icon-button" id="refreshBtn" @click="refreshReport()" v-if="report.refresh">
+        <md-button class="md-icon-button" id="refreshBtn" @click="refreshReport()" v-if="canRefreshReport">
           <md-icon>refresh</md-icon>
         </md-button>
         <md-field>
           <md-select v-model="fightKey" id="fightSelect" md-dense>
             <md-option :value="0">Select Encounter</md-option>
             <template v-for="fight in report.fights">
-              <md-option v-if="fight.boss && !fight.kill" :value="fight.id" v-bind:key="fight.id">{{fight.name}} {{Math.round(fight.fightPercentage/100)}}% Wipe [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
-              <md-option v-else :value="fight.id" v-bind:key="fight.id">{{fight.name}} [ {{new Date((fight.end_time - fight.start_time)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
+              <md-option v-if="fight.encounterID && !fight.kill" :value="fight.id" v-bind:key="fight.id">{{fight.name}} {{Math.round(fight.fightPercentage/100)}}% Wipe [ {{new Date((fight.endTime - fight.startTime)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
+              <md-option v-else :value="fight.id" v-bind:key="fight.id">{{fight.name}} [ {{new Date((fight.endTime - fight.startTime)).toISOString().substr(14, 5).replace(/^0/, '')}} ]</md-option>
             </template>
           </md-select>
         </md-field>
@@ -20,10 +20,10 @@
     </div>
     <div class="md-layout" v-if="report.fights" id="fight-select">
       <template v-for="fight in report.fights">
-        <div v-if="fight.boss && fight.kill" class="md-layout-item" :key="fight.id" :class="{selected: fightKey === fight.id}" @click="fightKey = fight.id"><span>{{fight.name}}</span></div>
+        <div v-if="fight.encounterID && fight.kill" class="md-layout-item" :key="fight.id" :class="{selected: fightKey === fight.id}" @click="fightKey = fight.id"><span>{{fight.name}}</span></div>
       </template>
     </div>
-    <div id="analysis" v-if="fightKey && report.fights && report.fights[fightKey-1] && report.fights[fightKey-1].summary">
+    <div id="analysis" v-if="fightKey && report.fights && report.fights[fightKey-1] && report.fights[fightKey-1].summary" :key="fightKey">
       <armor-pen :report="report" :fightKey="fightKey-1"></armor-pen>
       <ability-use :report="report" :fightKey="fightKey-1"></ability-use>
       <world-buffs :report="report" :fightKey="fightKey-1"></world-buffs>
@@ -50,7 +50,9 @@ export default {
   },
   created: async function () {
     var f = await fetch(`${window.baseURL}/api/report?id=${this.wcl}`)
-    this.report = await f.json()
+    f = await f.json()
+    this.canRefreshReport = f.reportData.report.endTime > f.timestamp + 3600000
+    this.report = f.reportData.report
     if (this.encounter && this.report.fights[this.encounter - 1]) {
       this.fightKey = this.encounter
       this.loadFight()
@@ -59,7 +61,8 @@ export default {
   data: function () {
     return {
       report: {},
-      fightKey: 0
+      fightKey: 0,
+      canRefreshReport: false
     }
   },
   watch: {
@@ -82,7 +85,6 @@ export default {
   methods: {
     loadFight: async function () {
       let id = this.fightKey - 1
-      console.log(this.report.fights, id)
       if (this.fightKey && !this.report.fights[id].enemyDebuffs) {
         var f = await fetch(`${window.baseURL}/api/events?id=${this.wcl}&fight=${id}&type=damage`)
         this.$set(this.report.fights[id], 'damage', (await f.json()))
