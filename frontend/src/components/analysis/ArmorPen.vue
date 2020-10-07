@@ -13,11 +13,11 @@
           <template  v-for="(item, target) in armorGainsLosses">
             <div v-if="item.FF.on || item.CoR.on || item.SA.on || item.EA.on" v-bind:key="target" class="stats">
               <strong>Armor Debuffs on {{target}}</strong>
-              <p><a class="warlock" :href="`https://classic.wowhead.com/spell=${item.CoR.spellID}`">{{item.CoR.spellID}}</a> was active for <strong>{{Math.round(100*item.CoR.on/(item.CoR.on+item.CoR.off)) || 0}}%</strong> of physical attacks:
+               <p v-if="item.CoR.on"><a class="warlock" :href="`https://classic.wowhead.com/spell=${item.CoR.spellID}`">{{item.CoR.spellID}}</a> was active for <strong>{{Math.round(100*item.CoR.on/(item.CoR.on+item.CoR.off)) || 0}}%</strong> of physical attacks:
                 <span v-if="item.CoR.on">This contributed to <strong>{{Math.round(item.CoR.contributed).toLocaleString()}}</strong> damage ({{Math.round(item.CoR.contributed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
                 <span v-if="item.CoR.off">With 100% uptime, this would have added <strong>{{Math.round(item.CoR.missed).toLocaleString()}}</strong> damage ({{Math.round(item.CoR.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
               </p>
-              <p><a class="druid" :href="`https://classic.wowhead.com/spell=${item.FF.spellID}`">{{item.FF.spellID}}</a> was active for <strong>{{Math.round(100*item.FF.on/(item.FF.on+item.FF.off)) || 0}}%</strong> of physical attacks:
+              <p v-if="item.FF.on"><a class="druid" :href="`https://classic.wowhead.com/spell=${item.FF.spellID}`">{{item.FF.spellID}}</a> was active for <strong>{{Math.round(100*item.FF.on/(item.FF.on+item.FF.off)) || 0}}%</strong> of physical attacks:
                 <span v-if="item.FF.on">This contributed to <strong>{{Math.round(item.FF.contributed).toLocaleString()}}</strong> damage ({{Math.round(item.FF.contributed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
                 <span v-if="item.FF.off">With 100% uptime, this would have added <strong>{{Math.round(item.FF.missed).toLocaleString()}}</strong> damage ({{Math.round(item.FF.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
               </p>
@@ -30,6 +30,12 @@
               <p><a class="rogue" :href="`https://classic.wowhead.com/spell=${item.EA.spellID}`">{{item.EA.spellID}}</a> was active for <strong>{{Math.round(100*item.EA.on/(item.EA.on+item.EA.off)) || 0}}%</strong> of physical attacks:
                 <span v-if="item.EA.on">This contributed to <strong>{{Math.round(item.EA.contributed).toLocaleString()}}</strong> damage ({{Math.round(item.EA.contributed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
                 <span v-if="item.EA.off">With 100% uptime, this would have added <strong>{{Math.round(item.EA.missed).toLocaleString()}}</strong> damage ({{Math.round(item.EA.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
+              </p>
+              <p v-if="item.PUNC.on"><a class="mage" :href="`https://classic.wowhead.com/spell=${item.PUNC.spellID}`">{{item.PUNC.spellID}}</a> x3 was active for <strong>{{Math.round(100*item.PUNC.on3/(item.PUNC.on3+item.PUNC.on+item.PUNC.off)) || 0}}%</strong> of physical attacks:
+                <span v-if="item.PUNC.contributed3">This contributed to <strong>{{Math.round(item.PUNC.contributed3).toLocaleString()}}</strong> damage ({{Math.round(item.PUNC.contributed3/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
+                <span v-else-if="item.PUNC.contributed">This contributed to <strong>{{Math.round(item.PUNC.contributed).toLocaleString()}}</strong> damage ({{Math.round(item.PUNC.contributed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
+                <span v-if="item.PUNC.on">Less then 3 stacks were active for <strong>{{Math.round(100*item.PUNC.on/(item.PUNC.on3+item.PUNC.on+item.PUNC.off)) || 0}}%</strong> of attacks, which could have added <strong>{{Math.round(item.PUNC.missed).toLocaleString()}}</strong> damage ({{Math.round(item.PUNC.missed/((item.time - item.firstDamage)/1000)).toLocaleString()}} DPS).</span>
+                <span>Puncture Armor is applied from <a class="mage" :href="`https://classic.wowhead.com/item=13204/`">x</a> and <a class="mage" :href="`https://classic.wowhead.com/item=13286/`">x</a></span>
               </p>
             </div>
           </template>
@@ -101,11 +107,14 @@ export default {
       const removeDebuff = /^(removedebuff)$/
       var armorDebuffs = {}
       let sunderStacks = {}
+      let punctureStacks = {}
       for (let debuff of this.report.fights[this.fightKey].enemyDebuffs) {
         let target = this.getUnitName(debuff.targetID, debuff.targetInstance)
+        let emperor = (this.targetToGameID(target) === 15275)
         if (!armorDebuffs[target]) {
           armorDebuffs[target] = []
           sunderStacks[target] = []
+          punctureStacks[target] = []
         }
         if (debuff.abilityGameID==11597 && debuff.type.match(addDebuff)) {
           sunderStacks[target] = Math.min(sunderStacks[target]+1, 5)
@@ -121,17 +130,25 @@ export default {
         else if (debuff.abilityGameID==11198 && debuff.type.match(removeDebuff)) {
           armorDebuffs[target].push({type: 'EA', spell: debuff.abilityGameID, reduced: 0, time: debuff.timestamp - start })
         }
-        else if ((debuff.abilityGameID==9907 || debuff.abilityGameID==17392) && debuff.type.match(addDebuff)) {
+        else if ((debuff.abilityGameID==9907 || debuff.abilityGameID==17392) && debuff.type.match(addDebuff) && !emperor) {
           armorDebuffs[target].push({type: 'FF', spell: debuff.abilityGameID, reduced: 505, time: debuff.timestamp - start })
         }
-        else if ((debuff.abilityGameID==9907 || debuff.abilityGameID==17392) && debuff.type.match(removeDebuff)) {
+        else if ((debuff.abilityGameID==9907 || debuff.abilityGameID==17392) && debuff.type.match(removeDebuff) && !emperor) {
           armorDebuffs[target].push({type: 'FF', spell: debuff.abilityGameID, reduced: 0, time: debuff.timestamp - start })
         }
-        else if (debuff.abilityGameID==11717 && debuff.type.match(addDebuff)) {
+        else if (debuff.abilityGameID==11717 && debuff.type.match(addDebuff) && !emperor) {
           armorDebuffs[target].push({type: 'CoR', spell: debuff.abilityGameID, reduced: 640, time: debuff.timestamp - start })
         }
-        else if (debuff.abilityGameID==11717 && debuff.type.match(removeDebuff)) {
+        else if (debuff.abilityGameID==11717 && debuff.type.match(removeDebuff) && !emperor) {
           armorDebuffs[target].push({type: 'CoR', spell: debuff.abilityGameID, reduced: 0, time: debuff.timestamp - start })
+        }
+        else if (emperor && debuff.abilityGameID==17315 && debuff.type.match(addDebuff)) {
+          punctureStacks[target] = Math.min(punctureStacks[target]+1, 3)
+          armorDebuffs[target].push({type: 'PUNC', spell: debuff.abilityGameID, stacks: punctureStacks[target], reduced: punctureStacks[target] * 200, time: debuff.timestamp - start })
+        }
+        else if (emperor && debuff.abilityGameID==17315 && debuff.type.match(removeDebuff)) {
+          punctureStacks[target] = 0
+          armorDebuffs[target].push({type: 'PUNC', spell: debuff.abilityGameID, stacks: 0, reduced: 0, time: debuff.timestamp - start })
         }
         else {
           continue
@@ -188,7 +205,8 @@ export default {
       var datasets = []
       var maxX = 0
       // plot each target armor
-      for (const target of Object.keys(armorDebuffs)) {
+      for (const target of Object.keys(armorDebuffs)) {        
+        let emperor = (this.targetToGameID(target) === 15275)
         var fullArmor = baseArmor[this.targetToGameID(target)] || this.targetArmor[target.replace(/\s#.*/, '')] || 3731
         var data = []
         var timePoints = []
@@ -202,6 +220,16 @@ export default {
             off5: 0,
             missed: 0,
             spellID: 11597
+          },
+          PUNC: {
+            on: 0,
+            on3: 0,
+            contributed: 0,
+            contributed3: 0,
+            off: 0,
+            off3: 0,
+            missed: 0,
+            spellID: 17315
           },
           EA: {
             on: 0,
@@ -234,6 +262,7 @@ export default {
           tracker['EA'][pen.time] = tracker['EA'][prevTime] || 0
           tracker['FF'][pen.time] = tracker['FF'][prevTime] || 0
           tracker['CoR'][pen.time] = tracker['CoR'][prevTime] || 0
+          tracker['PUNC'][pen.time] = tracker['PUNC'][prevTime] || 0
           if (pen.type) {
             tracker[pen.type][pen.time] = pen.reduced
           }
@@ -265,51 +294,67 @@ export default {
               tracker.firstDamage = timePoints[i]
             }
             if (dmg.timestamp - start > tracker.time && this.getAbilitySchool(dmg.abilityGameID) === 1 && (dmg.hitType == 1 || dmg.hitType == 2 || dmg.hitType == 4 || dmg.hitType == 6) && !dmg.tick && this.getUnitName(dmg.targetID, dmg.targetInstance) == target) {
+              var modifier = 1
+              if (dmg.hitType == 2) {
+                modifier = 2
+              }
               if (tracker['CoR'][timePoints[i]]) {
                 tracker['CoR'].on++
-                tracker['CoR'].contributed = tracker['CoR'].contributed + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 640)))
+                tracker['CoR'].contributed = tracker['CoR'].contributed + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] + 640)))
               }
               else {
                 tracker['CoR'].off++
-                tracker['CoR'].missed = tracker['CoR'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 640)) - dmg.amount - (dmg.blocked || 0))
+                tracker['CoR'].missed = tracker['CoR'].missed + Math.max(0, dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] - 640)) - dmg.amount - (dmg.blocked || 0))
               }
               if (tracker['FF'][timePoints[i]]) {
                 tracker['FF'].on++
-                tracker['FF'].contributed = tracker['FF'].contributed + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 505)))
+                tracker['FF'].contributed = tracker['FF'].contributed + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] + 505)))
               }
               else {
                 tracker['FF'].off++
-                tracker['FF'].missed = tracker['FF'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 505)) - dmg.amount - (dmg.blocked || 0))
+                tracker['FF'].missed = tracker['FF'].missed + Math.max(0, dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] - 505)) - dmg.amount - (dmg.blocked || 0))
               }
+              if (emperor) {
+                if (tracker['PUNC'][timePoints[i]] == 600) {
+                  tracker['PUNC'].on3++
+                  tracker['PUNC'].contributed3 = tracker['PUNC'].contributed3 + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] + 600)))
+                }
+                else {
+                  tracker['PUNC'].on++
+                  tracker['PUNC'].contributed = tracker['PUNC'].contributed + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] + tracker['PUNC'][timePoints[i]])))
+                  tracker['PUNC'].missed = tracker['PUNC'].missed + Math.max(0, dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] - 600)) - dmg.amount - (dmg.blocked || 0))
+                }
+              }                
               if (tracker['EA'][timePoints[i]]) {
                 tracker['EA'].on++
-                tracker['EA'].contributed = tracker['EA'].contributed + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2550)))
-                tracker['EA'].contributedVsSA = tracker['EA'].contributedVsSA + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2550))) - Math.max(0, dmg.unmitigatedAmount - (dmg.blocked || 0) - dmg.amount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2250)))
+                tracker['EA'].contributed = tracker['EA'].contributed + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2550)))
+                tracker['EA'].contributedVsSA = tracker['EA'].contributedVsSA + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2550))) - Math.max(0, dmg.unmitigatedAmount - (dmg.blocked || 0) - dmg.amount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2250)))
               }
               else if (tracker['SA'][timePoints[i]]) {
                 if (tracker['SA'][timePoints[i]] == 2250) {
                   tracker['SA'].on5++
-                  tracker['SA'].contributed5 = tracker['SA'].contributed5 + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2250)))
+                  tracker['SA'].contributed5 = tracker['SA'].contributed5 + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] + 2250)))
                 }
                 else {
                   tracker['SA'].on++
-                  tracker['SA'].contributed = tracker['SA'].contributed + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] + tracker['SA'][timePoints[i]])))
-                  tracker['SA'].missed = tracker['SA'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2250)) - dmg.amount - (dmg.blocked || 0))
+                  tracker['SA'].contributed = tracker['SA'].contributed + Math.max(0, dmg.amount - (dmg.blocked || 0) - dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] + tracker['SA'][timePoints[i]])))
+                  tracker['SA'].missed = tracker['SA'].missed + Math.max(0, dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2250)) - dmg.amount - (dmg.blocked || 0))
                 }
                 tracker['EA'].off++
-                tracker['EA'].missed = tracker['EA'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2550)) - dmg.amount - (dmg.blocked || 0))
+                tracker['EA'].missed = tracker['EA'].missed + Math.max(0, dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2550)) - dmg.amount - (dmg.blocked || 0))
               }
               else {
                 tracker['SA'].off++
-                tracker['SA'].missed = tracker['SA'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2250)) - dmg.amount - (dmg.blocked || 0))
+                tracker['SA'].missed = tracker['SA'].missed + Math.max(0, dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2250)) - dmg.amount - (dmg.blocked || 0))
                 tracker['EA'].off++
-                tracker['EA'].missed = tracker['EA'].missed + Math.max(0, dmg.unmitigatedAmount * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2550)) - dmg.amount - (dmg.blocked || 0))
+                tracker['EA'].missed = tracker['EA'].missed + Math.max(0, dmg.unmitigatedAmount * modifier * (1 - this.calcMitigation(armorTime[timePoints[i]] - 2550)) - dmg.amount - (dmg.blocked || 0))
               }
             }
           }
         }
         this.$set(this.armorGainsLosses, target, tracker)
       }
+      const calcMitigation = this.calcMitigation
 
       this.$nextTick(() => {
         const armorGainsLosses = this.armorGainsLosses
@@ -389,7 +434,7 @@ export default {
                       let m = line.match(/^(.*?):\s*([\d.]+)$/)
                       if (armorGainsLosses[m[1]] && !keepUnique[m[1]]) {
                         keepUnique[m[1]] = true
-                        var content = `<strong style="color:${tooltip.labelColors[i].borderColor}">${m[1]}</strong><br>${Math.round(m[2])} armor @ ${time/1000}s`
+                        var content = `<strong style="color:${tooltip.labelColors[i].borderColor}">${m[1]}</strong><br>${Math.round(m[2])} armor / ${Math.round(calcMitigation(m[2])*1000)/10}% mitigation @ ${time/1000}s`
                         var debuffs = ''
                         if (armorGainsLosses[m[1]].CoR[time]) {
                           debuffs += ' <img src="/assets/spell_shadow_unholystrength.gif" style="vertical-align:middle">'
@@ -402,6 +447,9 @@ export default {
                         }
                         if (armorGainsLosses[m[1]].EA[time]) {
                           debuffs += ' <img src="/assets/ability_warrior_riposte.gif">'
+                        }
+                        if (armorGainsLosses[m[1]].PUNC[time]) {
+                          debuffs += ' <img src="/assets/ability_criticalstrike.gif"><strong>x' + armorGainsLosses[m[1]].PUNC[time] / 200 + '</strong>'
                         }
                         if (debuffs) {
                           debuffs = '<br>' + debuffs
@@ -477,17 +525,18 @@ export default {
         SA: 0,
         FF: 0,
         CoR: 0,
-        EA: 0
+        EA: 0,
+        PUNC: 0
       }
       for (let arm of armor) {
         if (time < arm.time) {
-          return pen.SA + pen.FF + pen.CoR + pen.EA
+          return pen.SA + pen.FF + pen.CoR + pen.EA + pen.PUNC
         }
         else if (arm.type) {
           pen[arm.type] = arm.reduced
         }
       }
-      return pen.SA + pen.FF + pen.CoR + pen.EA
+      return pen.SA + pen.FF + pen.CoR + pen.EA + pen.PUNC
     },
     calcMitigation: function (armor) {
       armor = Math.max(0, armor)
@@ -517,7 +566,11 @@ canvas, #armorpen-chart-container {
   -webkit-user-select: none;
   -ms-user-select: none;
 }
+#armorpen-chart-container:hover #chartjs-tooltip-armorpen {
+  display: block;
+}
 #chartjs-tooltip-armorpen {
+  display: none;
   opacity: 1;
   position: absolute;
   background: rgba(0, 0, 0, .7);
